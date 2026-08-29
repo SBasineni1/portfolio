@@ -1,0 +1,199 @@
+import './style.css';
+import { Balloon, type BalloonEnv } from './physics/balloon';
+import { windAt } from './physics/wind';
+import { attachInput } from './input';
+import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
+import { Scenery, groundScreenY, type View } from './world/scenery';
+import { drawBalloon, type DrawOptions } from './world/render';
+import { Hud, type Phase } from './ui/hud';
+import { Sections } from './ui/sections';
+
+const sceneCanvas = document.querySelector<HTMLCanvasElement>('#scene');
+if (!sceneCanvas) throw new Error('Scene canvas not found.');
+const canvas = sceneCanvas;
+const sceneContext = canvas.getContext('2d', { alpha: false });
+if (!sceneContext) throw new Error('2D canvas context is unavailable.');
+const context = sceneContext;
+
+/** How many viewports of scroll the whole 35 km ascent takes. */
+const VIEWPORTS = 11;
+const SIM_STEP = 1 / 120;
+const MAX_FRAME = 0.25;
+
+const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reduced = reducedQuery.matches;
+reducedQuery.addEventListener('change', (e) => {
+  reduced = e.matches;
+});
+
+const coarse = window.matchMedia('(pointer: coarse)').matches;
+const lowPower = coarse || window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+
+const camera = new Camera();
+const scenery = new Scenery(lowPower ? 0.55 : 1);
+const balloon = new Balloon(width, height, lowPower);
+const sections = new Sections();
+const hud = new Hud(() => reduced);
+
+let driftX = 0;
+let time = 0;
+let anchored = true;
+let windStrength = 0;
+let phase: Phase = 'PAD HOLD';
+let narrow = window.innerWidth < 900;
+
+const env: BalloonEnv = {
+  altitude: 0,
+  anchored: true,
+  burst: 0,
+  windX: 0,
+  windY: 0,
+  homeX: width * 0.5,
+  homeY: height * 0.42,
+  padX: width * 0.5,
+  padY: 0,
+  groundY: 0,
+  reduced,
+  time: 0,
+};
+
+const view: View = {
+  width,
+  height,
+  altitude: 0,
+  time: 0,
+  driftX: 0,
+  windStrength: 0,
+  reduced,
+};
+
+const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0 };
+
+function resize(): void {
+  const oldW = width;
+  const oldH = height;
+  width = window.innerWidth;
+  height = window.innerHeight;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, lowPower ? 2 : 2.5);
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  balloon.recenter((width - oldW) * 0.5, (height - oldH) * 0.42);
+
+  narrow = width < 900;
+  sections.layout(Math.round(height * VIEWPORTS), height, narrow);
+  hud.layout();
+  camera.readFromScroll();
+}
+
+function updatePhase(): void {
+  // Read the scroll-derived burst, not the eased one, so BURST reads as an
+  // event and CHUTE DESCENT only lands once you are well past it.
+  const burst = env.burst;
+  if (burst > 0.6) phase = 'CHUTE DESCENT';
+  else if (balloon.severed) phase = 'BURST';
+  else if (balloon.releaseFlash > 0.08) phase = 'RELEASE';
+  else if (anchored) phase = 'PAD HOLD';
+  else phase = 'ASCENT';
+}
+
+function update(dt: number): void {
+  time += dt;
+  camera.step(dt);
+  const altitude = camera.altitude;
+
+  const wind = windAt(altitude, time, reduced);
+  windStrength = wind.strength;
+  driftX -= wind.x * dt * 0.11;
+
+  // Release / re-anchor with hysteresis so a jittery scroll can't chatter.
+  if (anchored && camera.targetAltitude > RELEASE_ALTITUDE) anchored = false;
+  else if (!anchored && camera.targetAltitude < RELEASE_ALTITUDE * 0.45) anchored = true;
+
+  env.altitude = altitude;
+  env.anchored = anchored;
+  env.burst = burstAmount(altitude);
+  env.windX = wind.x;
+  env.windY = wind.y;
+  env.homeX = width * 0.5;
+  env.homeY = height * (narrow ? 0.17 : anchored ? 0.42 : 0.44);
+  env.padX = width * 0.5;
+  env.padY = groundScreenY(altitude, height) - 10;
+  env.groundY = groundScreenY(altitude, height) - 4;
+  env.reduced = reduced;
+  env.time = time;
+
+  balloon.update(dt, env);
+  updatePhase();
+}
+
+function render(alpha: number): void {
+  view.width = width;
+  view.height = height;
+  view.altitude = camera.altitude;
+  view.time = time;
+  view.driftX = driftX;
+  view.windStrength = windStrength;
+  view.reduced = reduced;
+
+  scenery.draw(context, view);
+
+  drawOptions.time = time;
+  drawOptions.dark = Math.min(1, Math.max(0, (camera.altitude - 9000) / 15000));
+  drawOptions.reduced = reduced;
+  drawOptions.alpha = alpha;
+  drawBalloon(context, balloon, drawOptions);
+
+  scenery.drawForeground(context, view);
+}
+
+let previousTime = performance.now() / 1000;
+let accumulator = 0;
+
+function frame(timestamp: number): void {
+  const currentTime = timestamp / 1000;
+  let delta = currentTime - previousTime;
+  previousTime = currentTime;
+  if (delta > MAX_FRAME) delta = MAX_FRAME;
+  accumulator += delta;
+
+  let steps = 0;
+  while (accumulator >= SIM_STEP && steps < 12) {
+    update(SIM_STEP);
+    accumulator -= SIM_STEP;
+    steps++;
+  }
+  if (steps === 12) accumulator = 0;
+
+  render(accumulator / SIM_STEP);
+
+  hud.update(currentTime, camera.altitude, camera.ascentRate, phase);
+  sections.update(window.scrollY, height);
+  document.body.classList.toggle('sky-dark', camera.altitude > 7000);
+
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener('scroll', () => camera.readFromScroll(), { passive: true });
+window.addEventListener('resize', resize);
+attachInput(canvas, balloon);
+canvas.addEventListener('pointerdown', () => document.body.classList.add('has-grabbed'), {
+  once: true,
+});
+
+resize();
+camera.jumpTo(camera.targetAltitude);
+const relayout = (): void => {
+  sections.layout(Math.round(height * VIEWPORTS), height, narrow);
+  hud.layout();
+};
+if (document.fonts) document.fonts.ready.then(relayout);
+window.addEventListener('load', relayout);
+requestAnimationFrame(frame);
