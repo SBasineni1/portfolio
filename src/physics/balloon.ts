@@ -18,6 +18,7 @@ const STATION_K = 55;
 const STATION_C = 9.5;
 const GRAB_K = 950;
 const GRAB_C = 42;
+export const GUST_PEAK = 2600;
 
 const R_GROUND = 62;
 const R_BURST = 152;
@@ -93,6 +94,7 @@ export class Balloon {
   private grabbed = -1;
   private grabX = 0;
   private grabY = 0;
+  private gustAccel = 0;
 
   /** Set by update(), read by the renderer + HUD. */
   centroidX = 0;
@@ -294,6 +296,18 @@ export class Balloon {
     return this.grabbed >= 0;
   }
 
+  gust(strength: number, dir: number): void {
+    this.gustAccel = strength * dir;
+  }
+
+  get gustLevel(): number {
+    return Math.min(1, Math.abs(this.gustAccel) / GUST_PEAK);
+  }
+
+  get gustAccelSigned(): number {
+    return this.gustAccel;
+  }
+
   /* ------------------------------------------------------------ burst --- */
 
   private sever(): void {
@@ -431,7 +445,7 @@ export class Balloon {
     }
 
     // Wind, weighted by how much surface each part presents.
-    const wx = env.windX;
+    const wx = env.windX + this.gustAccel;
     const wy = env.windY;
     const ringWind = 1 * inflated + 0.35 * this.burstMix;
     for (let i = 0; i < this.ringCount; i++) {
@@ -460,6 +474,8 @@ export class Balloon {
         w.ay[this.chute[i]] += -vy * 5200 * this.burstMix - GRAVITY * 0.35;
       }
     }
+    this.gustAccel *= Math.exp(-dt / 0.35);
+    if (Math.abs(this.gustAccel) < 1) this.gustAccel = 0;
 
     // Station keeping. Once released, this is the "camera" holding the balloon
     // in frame; it reads as a steady ascent rather than a spring.
