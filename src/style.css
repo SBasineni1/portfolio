@@ -1,35 +1,98 @@
 /* ===================================================================
-   Radiosonde portfolio — mission-control instrument plates over a live
-   canvas sky. One serif moment (the name); everything else is mono,
-   because everything else is telemetry.
+   Radiosonde portfolio — the page is the sounding, not a stack of cards.
+
+   Nothing is a box. Each section hangs off a single plotted trace, the
+   way a temperature curve hangs off the pressure axis of a Skew-T, and
+   sits directly on the sky with only a soft haze behind it for legibility.
+
+   Two variable typefaces, both used for their WIDTH axis, which is the
+   whole typographic idea here:
+     Archivo      — expanded (118-125%) for nameplates and headers, normal
+                    width for prose. Instrument-panel lettering.
+     Martian Mono — condensed (75-88%) for anything that is a measurement:
+                    altitudes, dates, layer names, telemetry.
+   Hierarchy comes from width, tracking and hairlines. Never from a border.
+
+   Two scroll-linked signals drive everything that changes during the
+   ascent, both written per frame from the flight itself:
+     --dark  0..1 on :root  — daylight ink -> instrument white
+     --in    0..1 per panel — how present this section is
+   Because they are continuous, nothing here needs a colour transition.
    =================================================================== */
 
+@property --dark {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: true;
+}
+
+@property --in {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: false;
+}
+
 :root {
-  --ink: #070a0f;
-  --plate: rgba(8, 13, 21, 0.74);
-  --plate-solid: #0b1018;
-  --edge: rgba(242, 236, 224, 0.18);
-  --edge-soft: rgba(242, 236, 224, 0.09);
-  --paper: #f2ece0;
-  --paper-2: rgba(242, 236, 224, 0.68);
-  --paper-3: rgba(242, 236, 224, 0.44);
-  --amber: #f0a21c;
-  --orange: #e2662c;
+  /* Endpoints of the ascent. Everything below is mixed between them by
+     --dark, so there is no threshold and no light-switch moment. */
+  --ink-day: #08131f;
+  --ink-space: #e9f1f8;
 
-  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --ink: color-mix(in oklab, var(--ink-day), var(--ink-space) calc(var(--dark) * 100%));
+  --ink-2: color-mix(in srgb, var(--ink) 78%, transparent);
+  --ink-3: color-mix(in srgb, var(--ink) 56%, transparent);
+  --hair: color-mix(in srgb, var(--ink) 25%, transparent);
+  --hair-strong: color-mix(in srgb, var(--ink) 64%, transparent);
 
-  /* UI chrome that sits directly on the sky flips ink as the sky darkens. */
-  --ink-ui: rgba(10, 16, 24, 0.78);
-  --rule: rgba(10, 16, 24, 0.4);
-  --rule-strong: rgba(10, 16, 24, 0.66);
-  --ink-halo: 0 1px 4px rgba(244, 248, 255, 0.55);
+  --halo-tint: color-mix(
+    in srgb,
+    rgba(226, 238, 250, 0.6),
+    rgba(3, 7, 14, 0.9) calc(var(--dark) * 100%)
+  );
+  --halo: 0 1px 5px var(--halo-tint);
+
+  /* Chrome that is on screen for the whole flight steps rather than blends —
+     see syncInk(). These are the stepped counterparts of the tokens above. */
+  --chrome-ink: var(--ink-day);
+  --chrome-ink-3: color-mix(in srgb, var(--ink-day) 74%, transparent);
+  --chrome-hair: color-mix(in srgb, var(--ink-day) 26%, transparent);
+  --chrome-hair-strong: color-mix(in srgb, var(--ink-day) 64%, transparent);
+  /* Stacked rather than single: at 9.5px with wide tracking one soft shadow
+     is a hint, not a scrim. Three tight layers build enough local density to
+     carry the glyph over any sky, and still read as a glow, not a box. */
+  --chrome-halo: 0 0 2px rgba(238, 246, 253, 0.95), 0 0 6px rgba(238, 246, 253, 0.85),
+    0 0 15px rgba(238, 246, 253, 0.6);
+  --chrome-step: 0.26s ease-out;
+
+  /* Haze endpoints: a bright patch of air at the pad, thickening to a
+     shadow of the payload's own making in near space. */
+  --haze-core: color-mix(
+    in srgb,
+    rgba(233, 241, 249, 0.3),
+    rgba(4, 10, 21, 0.62) calc(var(--dark) * 100%)
+  );
+
+  /* One accent, taken from the balloon and payload already on the canvas. */
+  --flare: color-mix(in oklab, #d1521c, #f4a052 calc(var(--dark) * 100%));
+
+  --display: 'Archivo', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --data: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* The tape reserves a full column on the right; panels stop at its edge. */
   --tape-w: 210px;
   --tape-axis: 84px;
   --gutter: clamp(20px, 5vw, 84px);
-  --panel-w: min(444px, 40vw);
+  --panel-w: min(452px, 42vw);
+  --trace-gap: 26px;
+}
+
+body.sky-dark {
+  --chrome-ink: var(--ink-space);
+  --chrome-ink-3: color-mix(in srgb, var(--ink-space) 76%, transparent);
+  --chrome-hair: color-mix(in srgb, var(--ink-space) 26%, transparent);
+  --chrome-hair-strong: color-mix(in srgb, var(--ink-space) 66%, transparent);
+  --chrome-halo: 0 0 2px rgba(2, 6, 12, 0.96), 0 0 6px rgba(2, 6, 12, 0.88),
+    0 0 15px rgba(2, 6, 12, 0.68);
 }
 
 *,
@@ -50,11 +113,12 @@ body {
 body {
   margin: 0;
   background: #7ea7cd;
-  color: var(--paper);
-  font-family: var(--mono);
+  color: var(--ink);
+  font-family: var(--display);
   font-size: 14px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
 }
 
@@ -75,41 +139,38 @@ canvas#scene.is-grabbing {
   cursor: grabbing;
 }
 
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--flare);
+  outline-offset: 3px;
+}
+
 .skip {
   position: fixed;
   top: 8px;
   left: 8px;
   z-index: 60;
-  padding: 8px 12px;
-  background: var(--plate-solid);
-  color: var(--paper);
-  border: 1px solid var(--edge);
+  padding: 9px 14px;
+  background: #050c18;
+  color: #e9f1f8;
+  font-family: var(--data);
+  font-stretch: 80%;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-decoration: none;
-  transform: translateY(-160%);
-  transition: transform 0.18s ease;
+  transform: translateY(-180%);
+  transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .skip:focus-visible {
   transform: none;
 }
 
-a {
-  color: var(--paper);
-}
-
-:focus-visible {
-  outline: 2px solid var(--amber);
-  outline-offset: 3px;
-}
-
-/* -------------------------------------------------------- mission id --- */
-
-body.sky-dark {
-  --ink-ui: rgba(242, 236, 224, 0.74);
-  --rule: rgba(242, 236, 224, 0.42);
-  --rule-strong: rgba(242, 236, 224, 0.82);
-  --ink-halo: 0 1px 5px rgba(4, 8, 14, 0.85);
-}
+/* ------------------------------------------------------- mission id --- */
 
 .mission {
   position: fixed;
@@ -117,15 +178,19 @@ body.sky-dark {
   left: var(--gutter);
   z-index: 20;
   margin: 0;
-  font-size: 10px;
+  font-family: var(--data);
+  font-stretch: 78%;
+  font-weight: 500;
+  font-size: 9.5px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-ui);
-  transition: color 0.9s linear;
+  color: var(--chrome-ink);
+  text-shadow: var(--chrome-halo);
+  transition: color var(--chrome-step), text-shadow var(--chrome-step);
 }
 
 .mission__sep {
-  color: var(--amber);
+  color: var(--flare);
 }
 
 /* ------------------------------------------------------------ layout --- */
@@ -138,117 +203,109 @@ body.sky-dark {
 
 .hero {
   position: absolute;
-  top: 15vh;
+  top: 14vh;
   left: var(--gutter);
-  width: min(560px, 78vw);
+  width: min(620px, 80vw);
   pointer-events: auto;
 }
 
 .eyebrow {
-  margin: 0 0 20px;
-  font-size: 10px;
+  margin: 0 0 22px;
+  font-family: var(--data);
+  font-stretch: 78%;
+  font-weight: 500;
+  font-size: 9.5px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--ink);
-  opacity: 0.62;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  color: var(--ink-3);
 }
 
-.eyebrow__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--orange);
-  box-shadow: 0 0 0 3px rgba(226, 102, 44, 0.22);
-  animation: pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    box-shadow: 0 0 0 7px rgba(226, 102, 44, 0);
-  }
-}
-
+/* The nameplate: expanded grotesque, set like the label stencilled on the
+   side of the payload box it is riding in. */
 .hero__name {
   margin: 0;
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(52px, 9vw, 118px);
-  line-height: 0.92;
+  font-stretch: 122%;
+  font-weight: 800;
+  font-size: clamp(34px, 6.6vw, 82px);
+  line-height: 0.94;
   letter-spacing: -0.015em;
-  color: #10161f;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--ink);
 }
 
 .hero__tagline {
-  margin: 18px 0 0;
-  max-width: 34ch;
-  font-size: 15px;
-  color: #16202b;
+  margin: 20px 0 0;
+  max-width: 30ch;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-shadow: var(--halo);
 }
 
 .hero__hint {
-  margin: 34px 0 0;
-  max-width: 40ch;
-  font-size: 11.5px;
+  margin: 32px 0 0;
+  max-width: 38ch;
+  padding-left: 15px;
+  border-left: 1px solid var(--hair);
+  font-size: 12px;
   line-height: 1.8;
-  letter-spacing: 0.04em;
-  color: rgba(16, 24, 34, 0.72);
-  border-left: 1px solid rgba(16, 24, 34, 0.28);
-  padding-left: 14px;
+  color: var(--ink-3);
+  transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .hero__key {
-  color: #0d131b;
-  border-bottom: 1px solid var(--orange);
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--flare);
   padding-bottom: 1px;
 }
 
-/* ------------------------------------------------------------ panels --- */
+body.has-grabbed .hero__hint {
+  opacity: 0.35;
+}
+
+/* ------------------------------------------------------------ panels ---
+   No card. A trace on the outer edge, a tick where the header crosses it,
+   and a haze with no boundary in any direction. Presence is driven by --in,
+   written per frame from the payload's distance to this altitude band, so
+   these do not run transitions of their own. */
 
 .panel {
   position: absolute;
   width: var(--panel-w);
-  padding: 26px 26px 28px;
-  background: var(--plate);
-  border: 1px solid var(--edge);
-  backdrop-filter: blur(7px) saturate(120%);
-  -webkit-backdrop-filter: blur(7px) saturate(120%);
-  box-shadow: 0 22px 60px -30px rgba(2, 5, 10, 0.9);
+  padding: 20px var(--trace-gap) 22px var(--trace-gap);
+  /* Keeps the haze pseudo-element behind the text but above the sky. */
+  isolation: isolate;
   pointer-events: auto;
-  opacity: 0;
-  transform: translateY(26px);
-  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  opacity: var(--in);
+  transform: translateY(calc((1 - var(--in)) * 22px));
 }
 
-.panel.is-visible {
-  opacity: 1;
-  transform: none;
+/* Haze: a blurred shape rather than a filled box. A gradient always has to
+   resolve somewhere, and wherever it resolves it draws an edge; a blur has
+   no edge to draw. It tracks the text block, so the copy is carried evenly
+   from corner to corner, and dissolves into the sky in every direction. */
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: -28px -7% -28px -26px;
+  background: var(--haze-core);
+  border-radius: 64px;
+  filter: blur(42px);
+  z-index: -1;
 }
 
-.panel::before,
+/* The trace itself, plotted downward as the payload reaches this band. */
 .panel::after {
   content: '';
   position: absolute;
-  width: 9px;
-  height: 9px;
-  border: 1px solid var(--amber);
-  opacity: 0.75;
-}
-
-.panel::before {
-  top: -1px;
-  left: -1px;
-  border-right: 0;
-  border-bottom: 0;
-}
-
-.panel::after {
-  bottom: -1px;
-  right: -1px;
-  border-left: 0;
-  border-top: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, var(--hair-strong), var(--hair) 78%, transparent);
+  transform: scaleY(var(--in));
+  transform-origin: top;
 }
 
 .panel--left {
@@ -259,45 +316,62 @@ body.sky-dark {
   right: var(--tape-w);
 }
 
+/* Altitude annotation: the reading this section was taken at. */
 .panel__band {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 14px;
-  font-size: 10px;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 0 8px;
+  font-family: var(--data);
+  font-stretch: 78%;
+  font-weight: 400;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel__band span:first-child {
+  color: var(--flare);
+}
+
+.panel__band span:last-child::before {
+  content: '/ ';
+  color: var(--ink-3);
+}
+
+/* Header, with the tick that crosses the trace. */
+.panel__title {
+  position: relative;
+  margin: 0 0 18px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--hair-strong);
+  font-stretch: 125%;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--amber);
+  color: var(--ink);
 }
 
-.panel__band span:last-child {
-  color: var(--paper-3);
-}
-
-.panel__band::after {
+.panel__title::before {
   content: '';
-  flex: 1;
+  position: absolute;
+  left: calc(var(--trace-gap) * -1);
+  top: 0.44em;
+  width: 13px;
   height: 1px;
-  min-width: 20px;
-  background: linear-gradient(90deg, var(--edge), transparent);
-}
-
-.panel__title {
-  margin: 0 0 18px;
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: 40px;
-  line-height: 1;
-  letter-spacing: -0.01em;
+  background: var(--flare);
 }
 
 .panel__body p,
 .panel__lede {
-  margin: 0 0 12px;
-  color: var(--paper-2);
-  font-size: 13px;
+  margin: 0 0 13px;
+  font-size: 13.5px;
   line-height: 1.75;
+  color: var(--ink-2);
 }
 
 .panel__body p:last-child {
@@ -305,13 +379,15 @@ body.sky-dark {
 }
 
 .panel__foot {
-  margin: 22px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--edge-soft);
+  margin: 24px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+  font-family: var(--data);
+  font-stretch: 78%;
   font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--paper-3);
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
 }
 
 /* ----------------------------------------------------------- entries --- */
@@ -325,7 +401,7 @@ body.sky-dark {
 .entry + .entry {
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 1px solid var(--edge-soft);
+  border-top: 1px solid var(--hair);
 }
 
 .entry__head {
@@ -337,123 +413,135 @@ body.sky-dark {
 
 .entry__title {
   margin: 0;
-  font-size: 14px;
+  font-stretch: 104%;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--paper);
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--ink);
 }
 
+/* Dates are a measurement, so they are set in the data face. */
 .entry__meta {
   flex: none;
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-family: var(--data);
+  font-stretch: 76%;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--paper-3);
+  color: var(--ink-3);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .entry__org {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--orange);
-  letter-spacing: 0.02em;
+  margin: 3px 0 0;
+  font-stretch: 96%;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--flare);
 }
 
 .entry__text {
-  margin: 8px 0 0;
-  font-size: 12.5px;
+  margin: 9px 0 0;
+  font-size: 13px;
   line-height: 1.7;
-  color: var(--paper-2);
+  color: var(--ink-2);
 }
 
 .entry__bullets {
-  margin: 8px 0 0;
+  margin: 9px 0 0;
   padding: 0;
   list-style: none;
 }
 
 .entry__bullets li {
   position: relative;
-  padding-left: 16px;
-  margin-top: 5px;
-  font-size: 12.5px;
+  padding-left: 17px;
+  margin-top: 6px;
+  font-size: 13px;
   line-height: 1.7;
-  color: var(--paper-2);
+  color: var(--ink-2);
 }
 
+/* Isobar ticks, not bullet dots. */
 .entry__bullets li::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 9px;
-  width: 7px;
+  top: 10px;
+  width: 8px;
   height: 1px;
-  background: var(--amber);
+  background: var(--flare);
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px 9px;
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
+  font-family: var(--data);
+  font-stretch: 76%;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
-.tags li {
-  padding: 2px 7px;
-  border: 1px solid var(--edge);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--paper-3);
+.tags li + li::before {
+  content: '· ';
 }
 
 .entry__links {
   display: flex;
-  gap: 16px;
-  margin: 10px 0 0;
+  gap: 18px;
+  margin: 12px 0 0;
 }
 
 .entry__links a,
 .links a {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-stretch: 100%;
+  font-size: 13px;
+  font-weight: 500;
   text-decoration: none;
-  color: var(--paper);
-  border-bottom: 1px solid var(--orange);
-  padding-bottom: 2px;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  color: var(--ink);
+  border-bottom: 1px solid var(--flare);
+  padding-bottom: 1px;
+  cursor: pointer;
+  transition: color 0.2s ease-out, border-color 0.2s ease-out;
 }
 
 .entry__links a:hover,
 .links a:hover {
-  color: var(--amber);
-  border-color: var(--amber);
+  color: var(--flare);
+  border-color: var(--ink);
 }
 
 .links {
-  margin: 18px 0 0;
+  margin: 20px 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 12px;
+  gap: 13px;
 }
 
 .links li {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 14px;
 }
 
 .links .links__key {
-  font-size: 9.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--paper-3);
-  width: 62px;
+  width: 68px;
   flex: none;
+  font-family: var(--data);
+  font-stretch: 76%;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 /* -------------------------------------------------------------- tape --- */
@@ -466,7 +554,7 @@ body.sky-dark {
   width: var(--tape-w);
   z-index: 30;
   pointer-events: none;
-  font-size: 10px;
+  font-family: var(--data);
 }
 
 .tape::before {
@@ -476,7 +564,14 @@ body.sky-dark {
   bottom: 12vh;
   right: var(--tape-axis);
   width: 1px;
-  background: linear-gradient(180deg, transparent, var(--rule) 12%, var(--rule) 88%, transparent);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--chrome-hair) 12%,
+    var(--chrome-hair) 88%,
+    transparent
+  );
+  transition: background var(--chrome-step);
 }
 
 .tape__ticks,
@@ -495,8 +590,8 @@ body.sky-dark {
   position: absolute;
   right: var(--tape-axis);
   height: 1px;
-  background: var(--rule);
-  transition: background-color 0.9s linear;
+  background: var(--chrome-hair);
+  transition: background-color var(--chrome-step);
 }
 
 .tick--minor {
@@ -504,20 +599,23 @@ body.sky-dark {
 }
 
 .tick--major {
-  width: 11px;
-  background: var(--rule-strong);
+  width: 12px;
+  background: var(--chrome-hair-strong);
 }
 
 .tick__label {
   position: absolute;
   left: 18px;
   top: -7px;
-  font-size: 9px;
-  letter-spacing: 0.14em;
+  font-stretch: 76%;
+  font-weight: 400;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
   white-space: nowrap;
-  color: var(--ink-ui);
-  text-shadow: var(--ink-halo);
-  transition: color 0.9s linear;
+  color: var(--chrome-ink-3);
+  text-shadow: var(--chrome-halo);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--chrome-step), text-shadow var(--chrome-step);
 }
 
 .tape__stop {
@@ -530,16 +628,19 @@ body.sky-dark {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 0;
+  gap: 9px;
+  padding: 6px 0;
   text-decoration: none;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-stretch: 78%;
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-ui);
-  text-shadow: var(--ink-halo);
-  transition: color 0.25s ease;
+  color: var(--chrome-ink);
+  text-shadow: var(--chrome-halo);
   white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--chrome-step), text-shadow var(--chrome-step);
 }
 
 .tape__stop a::after {
@@ -547,11 +648,16 @@ body.sky-dark {
   width: 16px;
   height: 1px;
   background: currentColor;
+  transition: width 0.2s ease-out;
 }
 
 .tape__stop a:hover,
 .tape__stop.is-current a {
-  color: var(--amber);
+  color: var(--flare);
+}
+
+.tape__stop a:hover::after {
+  width: 24px;
 }
 
 /* Current altitude, riding the axis. */
@@ -560,60 +666,59 @@ body.sky-dark {
   right: calc(var(--tape-axis) - 4px);
   width: 9px;
   height: 9px;
-  background: var(--amber);
-  box-shadow: 0 0 12px rgba(240, 162, 28, 0.85);
+  background: var(--flare);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--flare) 70%, transparent);
   transform: translateY(-50%) rotate(45deg);
 }
 
-/* --------------------------------------------------------------- hud --- */
+/* --------------------------------------------------------------- hud ---
+   The one place a surface is honest: this is the instrument readout, so it
+   sits on a gradient that fades up into the sky with no top edge of its own. */
 
 .hud {
   position: fixed;
   left: 0;
-  right: var(--tape-w);
+  right: 0;
   bottom: 0;
   z-index: 30;
   display: flex;
-  gap: 0;
-  padding: 0 var(--gutter);
-  background: linear-gradient(180deg, rgba(7, 11, 18, 0), rgba(7, 11, 18, 0.82) 42%);
-  border-top: 1px solid rgba(242, 236, 224, 0.12);
+  padding: 0 var(--tape-w) 0 var(--gutter);
+  font-family: var(--data);
+  background: linear-gradient(180deg, rgba(4, 9, 18, 0), rgba(4, 9, 18, 0.86) 58%);
   pointer-events: none;
 }
 
 .hud__cell {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 12px 18px 13px;
-  border-right: 1px solid rgba(242, 236, 224, 0.1);
+  gap: 9px;
+  padding: 14px 20px 15px;
 }
 
 .hud__cell:first-child {
   padding-left: 0;
 }
 
-.hud__cell:last-child {
-  border-right: 0;
-}
-
 .hud__key {
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  color: rgba(242, 236, 224, 0.45);
+  font-stretch: 76%;
+  font-weight: 400;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  color: rgba(233, 241, 248, 0.42);
 }
 
 .hud__val {
-  font-size: 12px;
+  font-stretch: 88%;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--paper);
+  letter-spacing: 0.06em;
+  color: #e9f1f8;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .hud__cell--wide .hud__val {
-  color: var(--amber);
+  color: #f4a052;
 }
 
 /* ------------------------------------------------------------ mobile --- */
@@ -623,11 +728,17 @@ body.sky-dark {
     --tape-w: 96px;
     --tape-axis: 12px;
     --panel-w: min(430px, calc(100vw - var(--gutter) - 92px));
+    --trace-gap: 20px;
   }
 
   .panel--right {
     right: auto;
     left: var(--gutter);
+  }
+
+  .panel::before {
+    inset: -22px -5% -22px -20px;
+    filter: blur(30px);
   }
 
   /* Condensed tape: no ruler, just labelled stops and the marker. */
@@ -637,16 +748,12 @@ body.sky-dark {
   }
 
   .tape__stop {
-    right: 22px;
+    right: 20px;
   }
 
   .tape__stop a {
-    font-size: 8.5px;
-    letter-spacing: 0.1em;
-    padding: 3px 6px;
-    background: rgba(8, 13, 21, 0.72);
-    border: 1px solid var(--edge-soft);
-    color: var(--paper-2);
+    font-size: 8px;
+    letter-spacing: 0.18em;
   }
 
   .tape__stop a::after {
@@ -654,50 +761,46 @@ body.sky-dark {
   }
 
   .hud {
-    right: 0;
     padding: 0 14px;
   }
 
   .hud__cell {
-    padding: 9px 12px 10px;
-    gap: 6px;
+    padding: 10px 13px 11px;
+    gap: 7px;
   }
 
   .hud__cell--wide,
   .hud__cell:nth-child(4) {
     display: none;
   }
-
-  .hero__hint {
-    font-size: 11px;
-  }
 }
 
 @media (max-width: 520px) {
-  .panel {
-    padding: 20px 18px 22px;
+  :root {
+    --trace-gap: 16px;
+  }
+
+  .hero__name {
+    font-stretch: 112%;
   }
 
   .panel__title {
-    font-size: 32px;
+    font-stretch: 118%;
+    letter-spacing: 0.16em;
   }
 
   .hud__key {
     font-size: 8px;
-    letter-spacing: 0.16em;
   }
 
   .hud__val {
-    font-size: 11px;
+    font-size: 10.5px;
   }
 }
 
-body.has-grabbed .hero__hint {
-  opacity: 0.4;
-  transition: opacity 0.8s ease;
-}
-
-/* --------------------------------------------------- reduced motion ---- */
+/* --------------------------------------------------- reduced motion ----
+   The reveal stays — it is a fade tied to scroll position, not motion — but
+   nothing translates or draws itself. */
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -705,11 +808,19 @@ body.has-grabbed .hero__hint {
   }
 
   .panel {
-    transition: opacity 0.25s linear;
     transform: none;
   }
 
-  .eyebrow__dot {
-    animation: none;
+  .panel::after {
+    transform: none;
+  }
+
+  .tape__stop a::after,
+  .skip {
+    transition: none;
+  }
+
+  :root {
+    --chrome-step: 0.01s linear;
   }
 }

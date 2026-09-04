@@ -72,6 +72,40 @@ const view: View = {
 
 const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0 };
 
+/**
+ * How far the page ink has crossed from daylight to instrument white, 0..1.
+ *
+ * The sky is a continuous gradient, so the copy that sits on it is too: this
+ * is written to `--dark` every frame instead of toggling a threshold class,
+ * which means the ink tracks the scroll rather than snapping at one altitude
+ * and then crossfading on a timer of its own. The band is deliberately parked
+ * in the empty stretch between the About and Projects panels, so no copy is
+ * ever caught mid-crossfade at low contrast.
+ */
+const INK_FROM = 4800;
+const INK_TO = 7200;
+let inkDark = -1;
+
+function syncInk(altitude: number): void {
+  const span = (altitude - INK_FROM) / (INK_TO - INK_FROM);
+  const t = Math.min(1, Math.max(0, span));
+  // Smootherstep, not smoothstep: it lingers at each end and crosses the
+  // middle fast. Halfway through, the ink is a mid grey on a mid blue sky,
+  // which is the one genuinely weak moment in the ascent — so the less
+  // scroll spent there, the better.
+  const eased = t * t * t * (t * (t * 6 - 15) + 10);
+  // Style writes force a recalc, so only publish a visible change.
+  if (Math.abs(eased - inkDark) < 0.004) return;
+  inkDark = eased;
+  document.documentElement.style.setProperty('--dark', eased.toFixed(3));
+  // The panels can afford to blend through the crossover because none of them
+  // fly in this band. The fixed chrome does, and a scroll-linked blend would
+  // park it at mid grey on a mid blue sky for as long as the reader sits
+  // there. So the chrome steps instead, and crosses the weak zone on a timer
+  // it controls rather than one the scrollbar controls.
+  document.body.classList.toggle('sky-dark', eased > 0.5);
+}
+
 function resize(): void {
   const oldW = width;
   const oldH = height;
@@ -176,7 +210,7 @@ function frame(timestamp: number): void {
 
   hud.update(currentTime, camera.altitude, camera.ascentRate, phase);
   sections.update(window.scrollY, height);
-  document.body.classList.toggle('sky-dark', camera.altitude > 7000);
+  syncInk(camera.altitude);
 
   requestAnimationFrame(frame);
 }

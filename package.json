@@ -4,10 +4,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "oxlint",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@oxlint/plugins": "^1.80.0",
+    "oxlint": "^1.80.0",
     "typescript": "latest",
     "vite": "latest"
   }

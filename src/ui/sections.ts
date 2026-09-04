@@ -11,9 +11,16 @@ interface Positioned {
   el: HTMLElement;
   altitude: number;
   center: number;
+  /** Last published reveal amount, 0..1. Starts off-scale to force a write. */
+  shown: number;
 }
 
 const km = (m: number): string => (m / 1000).toFixed(1);
+
+/** Distance, in viewports, at which a section has faded out entirely. */
+const REVEAL_FAR = 0.85;
+/** Length of the fade, in viewports. Full opacity by 0.35 viewports out. */
+const REVEAL_RAMP = 0.5;
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -122,7 +129,7 @@ export class Sections {
 
     for (const band of bands) {
       const section = document.querySelector<HTMLElement>(`#${band.id}`);
-      if (section) this.items.push({ el: section, altitude: band.altitude, center: 0 });
+      if (section) this.items.push({ el: section, altitude: band.altitude, center: 0, shown: -1 });
     }
   }
 
@@ -146,10 +153,20 @@ export class Sections {
     }
   }
 
+  /**
+   * Reveal is scroll-linked rather than a threshold class, so a section comes
+   * up with the payload instead of firing a fixed-length transition of its
+   * own. The ramp saturates well before a panel parks, so a section at rest
+   * is always fully opaque and legible.
+   */
   update(scrollY: number, viewportHeight: number): void {
     for (const item of this.items) {
       const d = Math.abs(scrollY + viewportHeight * 0.5 - item.center) / viewportHeight;
-      item.el.classList.toggle('is-visible', d < 0.8);
+      const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
+      const eased = t * t * (3 - 2 * t);
+      if (Math.abs(eased - item.shown) < 0.004) continue;
+      item.shown = eased;
+      item.el.style.setProperty('--in', eased.toFixed(3));
     }
   }
 
