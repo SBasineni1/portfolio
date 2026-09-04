@@ -99,14 +99,20 @@
   --gutter: clamp(20px, 5vw, 84px);
   --panel-w: min(452px, 42vw);
   --trace-gap: 26px;
-  --card-surface: color-mix(
-    in oklab,
-    #f6f8fb,
-    #0f141c calc(var(--dark) * 100%)
-  );
+  /* Card ground. Deliberately NOT mixed by --dark: see the note above
+     .card--project. One paper stock for the whole flight, with its own local
+     ink so the card reads as an object on the sky rather than as chrome. */
+  --card-paper: #e9eef4;
+  --card-ink: #0a1420;
+  --card-surface: var(--card-paper);
   --card-radius: 16px;
-  --rail-gap: 24px;
-  --accent: #1c4b7a;
+  --card-pad: 24px;
+  --rail-gap: 20px;
+  --rail-fade: 64px;
+  /* Default card accent. Lifted off the sky's own value on purpose — at the
+     tropopause a card tinted in the sky's blue disappears into it. Per-card
+     accents from content.ts override this. */
+  --accent: #2a5f96;
 }
 
 body.sky-dark {
@@ -654,7 +660,10 @@ body.has-grabbed .hero__hint {
   color: var(--ink-3);
 }
 
-/* ------------------------------------------------ stations & cards --- */
+/* ------------------------------------------------ stations & cards ---
+   Cards are the one approved exception to the flat-chrome contract: a 16px
+   radius and a per-card accent tint, both confined to the cover slot and the
+   card ground. Everything else on the page stays hairline-and-type. */
 
 .station {
   position: absolute;
@@ -671,18 +680,22 @@ body.has-grabbed .hero__hint {
   align-items: flex-end;
   gap: 24px;
   padding-right: var(--gutter);
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
 .station .panel__title {
   margin-bottom: 0;
+  padding-bottom: 10px;
 }
 
+/* The lede is the Tagline step of the scale (16/1.5) — no new size. Tracking
+   is Linear's body value expressed proportionally (-0.165px at 15px). */
 .station__lede {
-  max-width: 52ch;
-  margin: 10px 0 0;
+  max-width: 48ch;
+  margin: 12px 0 0;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
+  letter-spacing: -0.011em;
   color: var(--ink-2);
 }
 
@@ -693,12 +706,20 @@ body.has-grabbed .hero__hint {
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--gutter);
-  padding: 4px var(--gutter) 12px 0;
-  padding-right: 40vw;
+  padding: 0 32vw 4px 0;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   list-style: none;
   margin: 0;
+  /* The rail runs under the altitude tape's label column. A mask dissolves
+     the cards into the sky before they reach it, so a stop label never sits
+     on a card — and the dissolve doubles as the "there is more" affordance
+     at the edge of the rail. This is a clip, not elevation; see DESIGN.md 7. */
+  mask-image: linear-gradient(
+    90deg,
+    #000 calc(100% - var(--rail-fade)),
+    transparent 100%
+  );
 }
 
 .rail::-webkit-scrollbar {
@@ -716,18 +737,45 @@ body.has-grabbed .hero__hint {
   color: var(--ink);
 }
 
+/* Card ink is local, not the flight's. --dark reaches 1 near 8 km, long
+   before the sky itself goes dark, so a surface that followed it made the
+   Projects rail a near-black slab sitting on a mid-blue sky. A card is an
+   object laid on the sky, not chrome over it: it keeps one paper stock for
+   the whole ascent, which is also what makes the black-on-white typographic
+   cover read as a printed specimen (the rauno rail) at every altitude.
+   Redeclaring the whole ink family locally means tags, dates, hairlines and
+   the link bracket all resolve against the card instead of the sky. */
+.card--project,
+.edu__card {
+  --ink: var(--card-ink);
+  --ink-2: color-mix(in srgb, var(--card-ink) 74%, transparent);
+  --ink-3: color-mix(in srgb, var(--card-ink) 52%, transparent);
+  --hair: color-mix(in srgb, var(--card-ink) 15%, transparent);
+  --hair-strong: color-mix(in srgb, var(--card-ink) 42%, transparent);
+  background: var(--card-paper);
+  color: var(--ink);
+}
+
 .card--project {
   display: flex;
   flex-direction: column;
-  width: 60vw;
-  height: 55vh;
+  width: clamp(300px, 58vw, 860px);
+  height: clamp(340px, 55vh, 540px);
 }
 
+/* Label row: filing index, title, year — the rauno "label above the cover".
+   The cover repeats the title at display size, deliberately. */
 .card__label {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   flex: none;
-  padding: 12px 16px;
+  padding: var(--card-pad) var(--card-pad) 14px;
+}
+
+.card__index,
+.card__year {
+  flex: none;
   font-family: var(--data);
   font-stretch: 78%;
   font-size: 9.5px;
@@ -738,6 +786,10 @@ body.has-grabbed .hero__hint {
   font-variant-numeric: tabular-nums;
 }
 
+.card__year {
+  margin-left: auto;
+}
+
 .card__cover {
   overflow: hidden;
 }
@@ -746,6 +798,9 @@ body.has-grabbed .hero__hint {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  /* The approved per-card tint: the cover stock takes a trace of the
+     project's accent, so each specimen sheet has its own temperature. */
+  background: color-mix(in oklab, #ffffff 92%, var(--accent));
 }
 
 .card__cover img,
@@ -761,20 +816,20 @@ body.has-grabbed .hero__hint {
 
 .card__big {
   position: absolute;
-  left: 16px;
+  left: var(--card-pad);
   bottom: -0.08em;
   color: var(--ink);
   font-family: var(--display);
-  font-size: clamp(72px, 11vw, 200px);
+  font-size: clamp(64px, 10vw, 176px);
   font-weight: 800;
   line-height: 1;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.03em;
   white-space: nowrap;
 }
 
 .card__body {
   flex: none;
-  padding: 16px;
+  padding: 18px var(--card-pad) var(--card-pad);
 }
 
 .card__title {
@@ -786,17 +841,33 @@ body.has-grabbed .hero__hint {
 }
 
 .card__text {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.65;
+  letter-spacing: -0.011em;
   color: var(--ink-2);
 }
 
+.card__body .card__text + .tags {
+  margin-top: 12px;
+}
+
+.card__body .entry__links {
+  margin-top: 16px;
+}
+
+/* The experience card is the tinted photo ground of the reference: white ink
+   on a colour that thickens toward the bottom edge, so the metadata block
+   sits on density rather than on flat paint. Portrait, like the reference. */
 .card--exp {
-  width: 40vw;
-  min-width: 320px;
-  height: 55vh;
-  color: #f4f7fa;
+  --ink: #f4f7fa;
+  --ink-2: color-mix(in srgb, #f4f7fa 76%, transparent);
+  --ink-3: color-mix(in srgb, #f4f7fa 58%, transparent);
+  --hair: color-mix(in srgb, #f4f7fa 24%, transparent);
+  --hair-strong: color-mix(in srgb, #f4f7fa 52%, transparent);
+  width: clamp(272px, 30vw, 432px);
+  height: clamp(340px, 55vh, 540px);
+  color: var(--ink);
 }
 
 .card--exp > .card__cover,
@@ -811,8 +882,14 @@ body.has-grabbed .hero__hint {
 .card__tint {
   position: absolute;
   inset: 0;
-  background: color-mix(in oklab, var(--accent) 78%, #08131f);
-  opacity: 0.86;
+  background:
+    linear-gradient(
+      to top,
+      color-mix(in oklab, var(--accent) 52%, #04101d) 0%,
+      transparent 66%
+    ),
+    var(--accent);
+  opacity: 0.9;
 }
 
 .card--exp:not(:has(img)) .card__tint {
@@ -821,13 +898,14 @@ body.has-grabbed .hero__hint {
 
 .card__logo {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: var(--card-pad);
+  left: var(--card-pad);
   max-height: 28px;
-  font: 500 10px/1 var(--data);
+  font: 500 9.5px/1 var(--data);
+  font-stretch: 78%;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  opacity: 0.9;
+  color: var(--ink-2);
 }
 
 .card__logo img {
@@ -841,46 +919,47 @@ body.has-grabbed .hero__hint {
 
 .card__content {
   position: absolute;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
+  left: var(--card-pad);
+  right: var(--card-pad);
+  bottom: var(--card-pad);
 }
 
 .card__eyebrow {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-family: var(--data);
   font-stretch: 78%;
-  font-size: 10px;
+  font-size: 9.5px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  opacity: 0.8;
+  color: var(--ink-3);
 }
 
 .card--exp .card__title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 650;
   line-height: 1.15;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .card--exp .card__text {
-  max-width: 40ch;
+  max-width: 34ch;
   margin-top: 10px;
-  color: inherit;
-  font-size: 15px;
-  line-height: 1.45;
-  opacity: 0.85;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .card--exp .tags {
-  color: inherit;
-  opacity: 0.8;
+  margin-top: 14px;
 }
 
 .edu {
   display: grid;
-  grid-template-columns: 42fr 58fr;
+  grid-template-columns: 40fr 60fr;
   gap: var(--rail-gap);
+  /* The cover is sized by its own ratio and the text card by its content —
+     the reference's uneven pair, not two stretched boxes of dead space. */
+  align-items: start;
   padding-right: var(--gutter);
 }
 
@@ -893,26 +972,34 @@ body.has-grabbed .hero__hint {
   overflow: hidden;
   aspect-ratio: 4 / 3;
   border-radius: var(--card-radius);
-  background: color-mix(in oklab, var(--accent) 78%, #08131f);
+  background:
+    linear-gradient(
+      to top,
+      color-mix(in oklab, var(--accent) 52%, #04101d) 0%,
+      transparent 66%
+    ),
+    var(--accent);
 }
 
+/* Fallback when there is no photograph: the school name as a ground mark.
+   It wraps and is inset like any other block, so a long name reads as set
+   type rather than as a word sawn off by the card edge. */
 .edu__mark {
   position: absolute;
-  right: 0;
-  bottom: -0.08em;
+  left: 24px;
+  right: 24px;
+  bottom: 18px;
   color: #f4f7fa;
-  font-size: clamp(48px, 7vw, 120px);
+  font-size: clamp(40px, 5vw, 84px);
   font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
-  opacity: 0.12;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  opacity: 0.16;
 }
 
 .edu__card {
   border: 1px solid var(--hair);
   border-radius: var(--card-radius);
-  background: var(--card-surface);
   padding: 28px;
 }
 
@@ -921,14 +1008,17 @@ body.has-grabbed .hero__hint {
   justify-content: space-between;
   align-items: baseline;
   gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--hair);
 }
 
 .edu__head h3,
 .edu__row h3 {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .edu__location,
@@ -944,34 +1034,53 @@ body.has-grabbed .hero__hint {
 }
 
 .edu__degree {
-  margin: 8px 0 0;
+  margin: 14px 0 0;
   font-size: 15px;
+  font-weight: 550;
   line-height: 1.5;
+  letter-spacing: -0.011em;
 }
 
 .edu__text {
-  margin: 14px 0 0;
-  font-size: 13.5px;
-  line-height: 1.6;
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  letter-spacing: -0.011em;
   color: var(--ink-2);
+}
+
+.edu__card > .tags {
+  margin-top: 16px;
 }
 
 .edu__card > .edu__dates {
   display: block;
   margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
 }
 
 .edu__row {
   grid-column: 1 / -1;
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 16px;
-  padding: 14px 0;
+  padding: 16px 0;
   border-top: 1px solid var(--hair);
 }
 
 .edu__row h3 {
   font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+.edu__row .edu__degree {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-2);
 }
 
 .ruler {
@@ -1166,6 +1275,10 @@ body.has-grabbed .hero__hint {
     --tape-axis: 12px;
     --panel-w: min(430px, calc(100vw - var(--gutter) - 92px));
     --trace-gap: 20px;
+    --card-pad: 18px;
+    /* Must clear the tape stop labels, which are nowrap and grow leftward
+       from the right edge — the rail bleeds under that column. */
+    --rail-fade: 104px;
   }
 
   /* The hero has to reserve the tape column the same way --panel-w does. Tape
@@ -1198,13 +1311,13 @@ body.has-grabbed .hero__hint {
   }
 
   .card--project {
-    width: 76vw;
-    height: 46vh;
+    width: 78vw;
+    height: clamp(300px, 46vh, 420px);
   }
 
   .card--exp {
-    width: 72vw;
-    height: 46vh;
+    width: 70vw;
+    height: clamp(300px, 46vh, 420px);
   }
 
   .edu {
@@ -1229,6 +1342,14 @@ body.has-grabbed .hero__hint {
 
   .tape__stop a::after {
     display: none;
+  }
+
+  /* With a station on screen the tape has no ruler left to read against, and
+     its labels sit directly over the rail's fade zone. Drop them back toward
+     the sky while a station is in view; --focus is the same scroll-linked
+     signal that blurs the scene, so this stays continuous. */
+  .tape__stop a {
+    opacity: calc(1 - var(--focus) * 0.66);
   }
 
   .hud {

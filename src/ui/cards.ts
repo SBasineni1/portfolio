@@ -19,9 +19,12 @@ export function projectCard(project: Project, index: number): HTMLLIElement {
   card.style.setProperty('--i', String(index));
   if (project.accent) card.style.setProperty('--accent', project.accent);
 
+  // Label row above the cover, the way a plate is captioned: filing index,
+  // title, year. The cover repeats the title at display size on purpose.
   const label = el('div', 'card__label');
-  label.append(el('span', undefined, String(index + 1).padStart(2, '0')));
-  if (project.year) label.append(el('span', undefined, project.year));
+  label.append(el('span', 'card__index', String(index + 1).padStart(2, '0')));
+  label.append(el('h3', 'card__title', project.title));
+  if (project.year) label.append(el('span', 'card__year', project.year));
   card.append(label);
 
   const cover = el('div', 'card__cover');
@@ -34,7 +37,6 @@ export function projectCard(project: Project, index: number): HTMLLIElement {
   card.append(cover);
 
   const body = el('div', 'card__body');
-  body.append(el('h3', 'card__title', project.title));
   body.append(el('p', 'card__text', project.description));
   if (project.tech.length) body.append(tags(project.tech));
   if (project.link || project.repo) {
