@@ -19,6 +19,7 @@ const CLOUD_COUNT = 46;
 const PUFFS = 6;
 const STAR_COUNT = 320;
 const STREAK_COUNT = 34;
+const BLEED = 24;
 
 export function groundScreenY(altitude: number, height: number): number {
   return height - 132 + altitude * GROUND_K;
@@ -126,7 +127,7 @@ export class Scenery {
     g.addColorStop(0.58, skyColor(v.altitude, 'mid'));
     g.addColorStop(1, skyColor(v.altitude, 'low'));
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, v.width, v.height);
+    ctx.fillRect(-BLEED, -BLEED, v.width + 2 * BLEED, v.height + 2 * BLEED);
   }
 
   private drawStars(ctx: CanvasRenderingContext2D, v: View): void {
@@ -139,7 +140,7 @@ export class Scenery {
       let x = (this.starX[i] * v.width - drift) % v.width;
       if (x < 0) x += v.width;
       const y = this.starY[i] * v.height + offset;
-      if (y < -20 || y > v.height + 20) continue;
+      if (y < -BLEED || y > v.height + BLEED) continue;
       const tw = v.reduced ? 1 : 0.72 + 0.28 * Math.sin(v.time * 1.7 + this.starPhase[i]);
       ctx.globalAlpha = a * tw * (0.35 + this.starR[i] * 0.5);
       ctx.beginPath();
@@ -178,10 +179,10 @@ export class Scenery {
     ctx.save();
     ctx.globalAlpha = a;
     ctx.beginPath();
-    ctx.moveTo(-40, v.height + 10);
+    ctx.moveTo(-40, v.height + BLEED);
     ctx.lineTo(-40, top + curve);
     ctx.quadraticCurveTo(v.width * 0.5, top - curve * 0.85, v.width + 40, top + curve);
-    ctx.lineTo(v.width + 40, v.height + 10);
+    ctx.lineTo(v.width + 40, v.height + BLEED);
     ctx.closePath();
     // Hazy land close in, deep ocean-blue once you are high enough that the
     // limb is mostly atmosphere.
@@ -302,7 +303,7 @@ export class Scenery {
     g.addColorStop(0.25, '#75855f');
     g.addColorStop(1, '#4c5a41');
     ctx.fillStyle = g;
-    ctx.fillRect(-2, gy, v.width + 4, 320);
+    ctx.fillRect(-BLEED, gy, v.width + 2 * BLEED, 320 + BLEED);
 
     // Grass tufts.
     ctx.strokeStyle = 'rgba(58,72,48,0.65)';
