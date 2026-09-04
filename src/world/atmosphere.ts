@@ -56,19 +56,22 @@ export function layerName(altitude: number): string {
 interface SkyStop {
   alt: number;
   top: [number, number, number];
+  upper: [number, number, number];
   mid: [number, number, number];
+  haze: [number, number, number];
   low: [number, number, number];
 }
 
 // Warm daylight blue at the pad, deepening to an indigo-black at burst.
 const SKY: SkyStop[] = [
-  { alt: 0, top: [88, 148, 202], mid: [150, 194, 226], low: [226, 224, 206] },
-  { alt: 2500, top: [64, 126, 190], mid: [126, 176, 216], low: [196, 214, 216] },
-  { alt: 9000, top: [36, 92, 168], mid: [86, 142, 198], low: [148, 186, 214] },
-  { alt: 16000, top: [18, 54, 126], mid: [44, 96, 166], low: [92, 142, 190] },
-  { alt: 24000, top: [10, 26, 74], mid: [22, 52, 116], low: [50, 92, 150] },
-  { alt: 31000, top: [6, 12, 38], mid: [12, 26, 68], low: [30, 56, 108] },
-  { alt: 38000, top: [3, 4, 14], mid: [6, 12, 34], low: [18, 32, 70] },
+  { alt: 0, top: [38, 105, 174], upper: [75, 143, 201], mid: [142, 191, 224], haze: [236, 232, 220], low: [226, 224, 206] },
+  { alt: 2500, top: [29, 88, 164], upper: [57, 123, 190], mid: [118, 174, 216], haze: [214, 224, 222], low: [196, 214, 216] },
+  { alt: 9000, top: [22, 68, 147], upper: [39, 98, 172], mid: [82, 140, 198], haze: [126, 169, 207], low: [148, 186, 214] },
+  { alt: 14000, top: [18, 54, 126], upper: [29, 75, 148], mid: [54, 108, 177], haze: [54, 108, 177], low: [105, 151, 194] },
+  { alt: 16000, top: [15, 45, 111], upper: [24, 65, 139], mid: [44, 96, 166], haze: [44, 96, 166], low: [92, 142, 190] },
+  { alt: 24000, top: [10, 26, 74], upper: [15, 38, 94], mid: [22, 52, 116], haze: [22, 52, 116], low: [50, 92, 150] },
+  { alt: 31000, top: [6, 12, 38], upper: [9, 19, 52], mid: [12, 26, 68], haze: [12, 26, 68], low: [30, 56, 108] },
+  { alt: 38000, top: [3, 4, 14], upper: [4, 8, 23], mid: [6, 12, 34], haze: [6, 12, 34], low: [18, 32, 70] },
 ];
 
 const scratch: [number, number, number] = [0, 0, 0];
@@ -84,7 +87,7 @@ function lerp3(
   into[2] = a[2] + (b[2] - a[2]) * t;
 }
 
-export type SkyBand = 'top' | 'mid' | 'low';
+export type SkyBand = 'top' | 'upper' | 'mid' | 'haze' | 'low';
 
 /** rgb() string for one band of the sky gradient at a given altitude. */
 export function skyColor(altitude: number, band: SkyBand, alpha = 1): string {
