@@ -5,13 +5,18 @@
    way a temperature curve hangs off the pressure axis of a Skew-T, and
    sits directly on the sky with only a soft haze behind it for legibility.
 
-   Two variable typefaces, both used for their WIDTH axis, which is the
-   whole typographic idea here:
-     Archivo      — expanded (118-125%) for nameplates and headers, normal
-                    width for prose. Instrument-panel lettering.
-     Martian Mono — condensed (75-88%) for anything that is a measurement:
-                    altitudes, dates, layer names, telemetry.
-   Hierarchy comes from width, tracking and hairlines. Never from a border.
+   Two typefaces, one display and one data:
+     Inter        — display and UI. Hierarchy is carried by WEIGHT, size, case
+                    and tracking (800 nameplate -> 700 title -> 650 entry ->
+                    550 org -> 400 body). Inter has NO width axis, so
+                    font-stretch must never appear on a display-face rule.
+     Martian Mono — condensed (76-88%) for anything that is a measurement:
+                    altitudes, dates, layer names, telemetry. Its wdth axis IS
+                    real and load-bearing; condensing is what makes a number
+                    read as an instrument reading.
+   Display type is SET SOLID (line-height 1) so headlines lock into a block.
+   Hierarchy comes from weight, tracking and hairlines. Never from a border.
+   See DESIGN.md — that file is the contract, this is the implementation.
 
    Two scroll-linked signals drive everything that changes during the
    ascent, both written per frame from the flight itself:
@@ -43,6 +48,10 @@
   --ink-3: color-mix(in srgb, var(--ink) 56%, transparent);
   --hair: color-mix(in srgb, var(--ink) 25%, transparent);
   --hair-strong: color-mix(in srgb, var(--ink) 64%, transparent);
+  /* Field grid: a survey overlay across the whole viewport. Fainter than a
+     trace hairline so it reads as graph paper, never as structure. */
+  --grid: color-mix(in srgb, var(--ink) 9%, transparent);
+  --grid-tick: color-mix(in srgb, var(--ink) 30%, transparent);
 
   --halo-tint: color-mix(
     in srgb,
@@ -75,7 +84,7 @@
   /* One accent, taken from the balloon and payload already on the canvas. */
   --flare: color-mix(in oklab, #d1521c, #f4a052 calc(var(--dark) * 100%));
 
-  --display: 'Archivo', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --display: 'Inter', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
   --data: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* The tape reserves a full column on the right; panels stop at its edge. */
@@ -137,6 +146,48 @@ canvas#scene.is-grabbable {
 
 canvas#scene.is-grabbing {
   cursor: grabbing;
+}
+
+/* ------------------------------------------------------------- field --- */
+
+/* A survey grid over the whole viewport: the page is a chart, so it gets
+   chart paper. Fixed, so it reads as the instrument's own reticle rather than
+   as page content scrolling past. Sits above the canvas and below #content.
+   Ticks are drawn at the interior intersections only -- the crossing mark is
+   the point, a continuous ruled grid would fight the trace. */
+.field {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 25% 100%, 100% 33.3333%;
+  background-position: 0 0, 0 0;
+}
+
+.field__tick {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  /* Two 1px rules crossing, not a plus glyph -- a glyph would inherit font
+     metrics and drift between breakpoints. */
+  background-image:
+    linear-gradient(to right, var(--grid-tick) 9px, transparent 0),
+    linear-gradient(to bottom, var(--grid-tick) 9px, transparent 0);
+  background-size: 9px 1px, 1px 9px;
+  background-position: center center, center center;
+  background-repeat: no-repeat;
+  transform: translate(-50%, -50%);
+}
+
+@media (max-width: 520px) {
+  /* At phone width the vertical rules crowd the trace; keep the horizons. */
+  .field {
+    background-image: linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 100% 33.3333%;
+  }
 }
 
 a {
@@ -224,11 +275,13 @@ a {
    side of the payload box it is riding in. */
 .hero__name {
   margin: 0;
-  font-stretch: 122%;
   font-weight: 800;
   font-size: clamp(34px, 6.6vw, 82px);
-  line-height: 0.94;
-  letter-spacing: -0.015em;
+  /* Set solid: line-height == font-size, so the two lines lock into one block. */
+  line-height: 1;
+  /* Inter needs the optical correction at display size; the reference face did
+     not, which is why its rule was `normal`. Documented deviation in DESIGN.md. */
+  letter-spacing: -0.022em;
   text-transform: uppercase;
   text-wrap: balance;
   color: var(--ink);
@@ -254,9 +307,11 @@ a {
   transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* An emphasis underline, not an accent moment -- --flare is rationed to the
+   three jobs in DESIGN.md section 2 and a text rule is not one of them. */
 .hero__key {
   color: var(--ink-2);
-  border-bottom: 1px solid var(--flare);
+  border-bottom: 1px solid var(--hair-strong);
   padding-bottom: 1px;
 }
 
@@ -347,7 +402,6 @@ body.has-grabbed .hero__hint {
   margin: 0 0 18px;
   padding-bottom: 11px;
   border-bottom: 1px solid var(--hair-strong);
-  font-stretch: 125%;
   font-weight: 700;
   font-size: 15px;
   line-height: 1;
@@ -413,9 +467,8 @@ body.has-grabbed .hero__hint {
 
 .entry__title {
   margin: 0;
-  font-stretch: 104%;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.25;
   letter-spacing: -0.005em;
   color: var(--ink);
@@ -436,9 +489,9 @@ body.has-grabbed .hero__hint {
 
 .entry__org {
   margin: 3px 0 0;
-  font-stretch: 96%;
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 550;
+  line-height: 1.5;
   color: var(--flare);
 }
 
@@ -500,24 +553,47 @@ body.has-grabbed .hero__hint {
   margin: 12px 0 0;
 }
 
+/* Links are bracketed, not underlined. A hairline frame snaps around the
+   hit area on hover -- the way a reading gets boxed on an instrument panel --
+   instead of an accent rule under the text. This keeps --flare rationed (see
+   DESIGN.md section 2) and keeps the chrome layer free of any fill or border
+   at rest. The frame is a ::before so it never affects layout. */
 .entry__links a,
 .links a {
-  font-stretch: 100%;
+  position: relative;
+  display: inline-block;
+  padding: 2px 6px;
+  margin: -2px -6px;
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   color: var(--ink);
-  border-bottom: 1px solid var(--flare);
-  padding-bottom: 1px;
   cursor: pointer;
-  transition: color 0.2s ease-out, border-color 0.2s ease-out;
 }
 
-.entry__links a:hover,
-.links a:hover {
-  color: var(--flare);
+.entry__links a::before,
+.links a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Visible-but-quiet at rest. The reference leaves this fully transparent, but
+     its links are nav items in fixed positions; these sit inside prose, where an
+     invisible affordance is just unmarked text. A hairline reads as a bracket
+     waiting to close, and still costs nothing visually. Documented deviation. */
+  border: 1px solid var(--hair);
+  border-radius: 0;
+  transition: border-color 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.entry__links a:hover::before,
+.links a:hover::before {
   border-color: var(--ink);
 }
+
+/* No focus rule needed here: the global :focus-visible above already draws a
+   --flare ring, and the bracket frame is bound to :hover, so the two never
+   stack. (The reference site shipped no visible focus state at all; that part
+   is deliberately not copied.) */
 
 .links {
   margin: 20px 0 0;
@@ -731,6 +807,14 @@ body.has-grabbed .hero__hint {
     --trace-gap: 20px;
   }
 
+  /* The hero has to reserve the tape column the same way --panel-w does. Tape
+     stop labels are nowrap and grow leftward from the right edge, so a hero
+     measured in `ch` collides with the longest label. Inter's `ch` is ~10%
+     wider than the previous display face, which is what surfaced this. */
+  .hero {
+    width: min(620px, calc(100vw - var(--gutter) - 108px));
+  }
+
   .panel--right {
     right: auto;
     left: var(--gutter);
@@ -781,11 +865,10 @@ body.has-grabbed .hero__hint {
   }
 
   .hero__name {
-    font-stretch: 112%;
+    letter-spacing: -0.018em;
   }
 
   .panel__title {
-    font-stretch: 118%;
     letter-spacing: 0.16em;
   }
 
