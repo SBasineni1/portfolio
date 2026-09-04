@@ -49,7 +49,7 @@ on the sky with only a haze behind it for legibility.
 The signature is **altitude as structure**. The pilot-style indicator on the right is a real
 axis with real ticks, each section sits at its own altitude, and its readout follows the actual
 simulation. The top tab provides direct section navigation without breaking that spatial model.
-Two instruments stay fixed for the whole flight: the top-left navigation tab and the right-hand
+Two instruments stay fixed for the whole flight: the top-center navigation tab and the right-hand
 altitude indicator. Nothing else is fixed chrome any more — the mission strip and telemetry HUD
 are gone.
 
@@ -58,10 +58,12 @@ radius, no fill. All atmosphere lives in the canvas behind it: the sky gradient,
 the haze. That split is the architecture — **flat precise instrument in the DOM, lit world in
 the canvas** — and it is why the UI never competes with the scene.
 
-The world is two canvases. `#sky` carries the procedural atmosphere (five-stop gradient, horizon
-haze band, brush-stamped cumulus, cirrus, sun, limb, stars) and is blurred and dimmed by
-`--focus` whenever a text station is in view, so prose always sits on a soft ground. `#scene`
-carries the balloon and near clouds and is never blurred. The balloon itself is a **photograph on
+The world is three canvases. `#sky` carries the sharp procedural atmosphere (five-stop gradient,
+horizon haze band, brush-stamped cumulus, cirrus, sun, limb, stars). `#sky-soft` redraws that
+scenery at 1/12 scale (1/8 under low power), smooths it through half- and full-size upscales, and
+dims it to 72%; `--focus` crossfades this fixed-softness layer over `#sky` whenever a text station
+is in view, so prose always sits on a soft ground without an animated CSS filter. `#scene`
+carries the balloon and near clouds and is never softened. The balloon itself is a **photograph on
 a soft body**: envelope, packed-chute bundle and sonde sprites are drawn over the Verlet ring,
 the envelope clipped to the ring's real silhouette and deformed by a neck-frame affine fit, so a
 grab still pinches it and pressure still bulges it.
@@ -71,10 +73,13 @@ launch pad, tether reel, ground station and a windsock that reads the live wind.
 sky's mid, haze and low bands blend toward warm `dusk` tints and the sun sits lower and warmer;
 above 2 km the palette is the untouched day gradient.
 
-Moving between stations is not a simple park-and-forget. Entering a station latches an **exit**:
-the station-keeping home moves from mid-screen out to `width + EXIT_CLEARANCE`, and one decaying
-gust impulse kicks the balloon toward it — it leans right, the tether whips, the sonde trails,
-canvas streaks spike. The station's cards sweep in only once the balloon's leftmost point has
+Moving between stations is not a simple park-and-forget. The default `physics` mode makes an
+entering station latch an **exit**: the station-keeping home moves from mid-screen out to
+`width + EXIT_CLEARANCE`, and one decaying gust impulse kicks the balloon toward it — it leans
+right, the tether whips, the sonde trails, canvas streaks spike. The switchable `track` mode
+(`?motion=track`) suppresses that gust and moves the home along a smootherstep-sampled quadratic
+Bézier rising off the right edge, then reverses the same path when the exit releases. The
+station's cards sweep in only once the balloon's leftmost point has
 cleared the viewport: a 0.4s gate that, once it starts, latches open regardless of what the
 balloon does afterward. When the station falls out of view the exit releases and the balloon
 drifts back in from the right. Reduced motion never moves the assembly — it fades in (`fade`) on
@@ -233,7 +238,7 @@ Pilot-style: a scrolling strip built from `tape.ts` at the real 0.086 px/m, thre
 left on the page.
 
 ### Navigation tab
-Supaste-derived: fixed top-left, black, hanging from the top edge with 18px bottom corners and
+Supaste-derived: fixed top-center, black, hanging from the top edge with 18px bottom corners and
 20×20 inverted-corner flares. A 30px balloon-glyph icon plus wordmark, Inter 14px links, and
 Contact set as a white pill CTA. `is-current` is driven by the band altitude thresholds; items
 scroll via `scrollToAltitude`.
@@ -278,11 +283,15 @@ One 1×14px `--hair-strong` tick per card, the current one 2×20px in `--flare`,
 - Durations: 0.3s interaction, 0.26s chrome step, 0.8s section entrance.
 - `--dark`, `--in`, `--sweep` and `--focus` are **continuous scroll-linked signals**, so nothing
   needs a colour transition — the change is already smooth. Do not add one. `--focus` (max
-  station presence) blurs and dims `#sky`; `--sweep` drives the station body's
+  station presence) crossfades the pre-softened, dimmed `#sky-soft` layer over `#sky`; its blur
+  radius is fixed by `SOFT_DIVISOR`. `--sweep` drives the station body's
   `translateX((1 − sweep) · 60vw)` and the per-card `--i · 8vw` stagger (see the next bullet for
   how `--sweep` is actually derived on a station).
 - **Exit → gate → sweep** replaces a threshold class. A station's `--in` crossing 0.15 upward
-  latches `exit` and fires one `GUST_PEAK` impulse through the balloon's wind path (0.35s decay);
+  latches `exit`. In the default `physics` mode it fires one `GUST_PEAK` impulse through the
+  balloon's wind path (0.35s decay) and moves the station-keeping home directly offscreen. In
+  `track` mode (`?motion=track`) it fires no gust and advances that home along the 1.1s exit
+  track instead; `?motion=physics` selects the default explicitly. In both modes,
   crossing back below 0.05 releases it — 0.15/0.05 hysteresis so a jittery scroll can't chatter.
   While exited, the station-keeping home moves out to `width + EXIT_CLEARANCE` (420px past the
   edge). The station body does not sweep on `--in` alone: a gate advances over 0.4s once the
@@ -292,17 +301,17 @@ One 1×14px `--hair-strong` tick per card, the current one 2×20px in `--flare`,
 - Motion must signal state. No decorative animation on non-interactive elements.
 - Honour `prefers-reduced-motion`: no gust impulse, no translation at all. The station body's
   opacity tracks `--sweep` directly (`fade`) instead of a transform, and wind stays calm. The
-  blur is legibility, not motion, and stays on.
+  soft-sky crossfade is legibility, not motion, and stays on.
 
 ## 7. Depth
 
 There is none in the chrome layer, deliberately. No `box-shadow`, no `border-radius`, no CSS
 gradient on any instrument element. Separation comes from hairlines, ticks, tracking, and the
-canvas behind — and, behind stations, the `--focus` blur of the sky itself.
+canvas behind — and, behind stations, the `--focus` crossfade to the softened sky.
 `text-shadow` haloes are legibility tools over an unpredictable sky, not elevation — do not
 repurpose them as glow effects.
 
 **The card exception.** Cards (§5) are content surfaces, not chrome: 16px radius, hairline
 frame, tinted covers with a bottom scrim. That is the whole allowance. No drop shadows, no
-hover lift, no glass. If a card ever needs to feel higher, sharpen the sky blur behind it, do
+hover lift, no glass. If a card ever needs to feel higher, increase the soft-sky separation, do
 not shadow it.

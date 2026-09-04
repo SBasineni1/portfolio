@@ -26,6 +26,10 @@ export class AltTape {
     this.buildStrip();
   }
 
+  get element(): HTMLElement {
+    return this.host;
+  }
+
   private buildStrip(): void {
     this.strip.style.height = `${STRIP_H}px`;
 

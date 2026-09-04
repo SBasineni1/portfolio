@@ -1,5 +1,6 @@
 import './style.css';
 import { Balloon, GUST_PEAK, type BalloonEnv } from './physics/balloon';
+import { ExitTrack, EXIT_CLEARANCE } from './physics/track';
 import { windAt } from './physics/wind';
 import { attachInput } from './input';
 import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
@@ -19,6 +20,25 @@ const skyCanvasContext = skyCanvas.getContext('2d', { alpha: false });
 if (!skyCanvasContext) throw new Error('2D sky canvas context is unavailable.');
 const skyContext = skyCanvasContext;
 
+const softElement = document.querySelector<HTMLCanvasElement>('#sky-soft');
+if (!softElement) throw new Error('Soft sky canvas not found.');
+const softCanvas = softElement;
+const softCanvasContext = softCanvas.getContext('2d', { alpha: false });
+if (!softCanvasContext) throw new Error('2D soft sky canvas context is unavailable.');
+const softContext = softCanvasContext;
+const softSmall = document.createElement('canvas');
+const softSmallCanvasContext = softSmall.getContext('2d', { alpha: false });
+if (!softSmallCanvasContext) throw new Error('2D soft sky downsample context is unavailable.');
+const softSmallContext = softSmallCanvasContext;
+const softBlur = document.createElement('canvas');
+const softBlurCanvasContext = softBlur.getContext('2d', { alpha: false });
+if (!softBlurCanvasContext) throw new Error('2D soft sky blur context is unavailable.');
+const softBlurContext = softBlurCanvasContext;
+const softHalf = document.createElement('canvas');
+const softHalfCanvasContext = softHalf.getContext('2d', { alpha: false });
+if (!softHalfCanvasContext) throw new Error('2D soft sky upscale context is unavailable.');
+const softHalfContext = softHalfCanvasContext;
+
 const sceneCanvas = document.querySelector<HTMLCanvasElement>('#scene');
 if (!sceneCanvas) throw new Error('Scene canvas not found.');
 const canvas = sceneCanvas;
@@ -30,7 +50,10 @@ const context = sceneContext;
 const VIEWPORTS = 11;
 const SIM_STEP = 1 / 120;
 const MAX_FRAME = 0.25;
-const EXIT_CLEARANCE = 420;
+const DEFAULT_MOTION: 'physics' | 'track' = 'physics';
+const motionQuery = new URLSearchParams(location.search).get('motion');
+const MOTION = motionQuery === 'track' || motionQuery === 'physics' ? motionQuery : DEFAULT_MOTION;
+const tracked = MOTION === 'track';
 
 const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 let reduced = reducedQuery.matches;
@@ -40,6 +63,7 @@ reducedQuery.addEventListener('change', (e) => {
 
 const coarse = window.matchMedia('(pointer: coarse)').matches;
 const lowPower = coarse || window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
+const SOFT_DIVISOR = lowPower ? 8 : 12;
 document.body.classList.toggle('low-power', lowPower);
 
 let focus = 0;
@@ -51,10 +75,11 @@ let height = window.innerHeight;
 const camera = new Camera();
 const scenery = new Scenery(lowPower ? 0.55 : 1);
 const balloon = new Balloon(width, height, lowPower);
+const track = new ExitTrack();
 const sections = new Sections(
   () => reduced,
   () => {
-    if (!reduced) balloon.gust(GUST_PEAK, 1);
+    if (!reduced && !tracked) balloon.gust(GUST_PEAK, 1);
   },
 );
 const nav = new Nav(() => reduced);
@@ -78,6 +103,7 @@ const env: BalloonEnv = {
   padY: 0,
   groundY: 0,
   reduced,
+  tracked,
   time: 0,
 };
 
@@ -103,8 +129,8 @@ const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0, fade: 1 
  * in the empty stretch between the About and Projects panels, so no copy is
  * ever caught mid-crossfade at low contrast.
  */
-const INK_FROM = 4800;
-const INK_TO = 7200;
+const INK_FROM = 3600;
+const INK_TO = 4900;
 let inkDark = -1;
 let lastFocus = -1;
 
@@ -117,7 +143,7 @@ function syncSignals(altitude: number, nextFocus: number): void {
   // scroll spent there, the better.
   const eased = t * t * t * (t * (t * 6 - 15) + 10);
   // Style writes force a recalc, so only publish visible changes.
-  if (Math.abs(eased - inkDark) >= 0.004) {
+  if (Math.abs(eased - inkDark) >= 0.01) {
     inkDark = eased;
     document.documentElement.style.setProperty('--dark', eased.toFixed(3));
     // The panels can afford to blend through the crossover because none of them
@@ -129,7 +155,9 @@ function syncSignals(altitude: number, nextFocus: number): void {
   }
   if (Math.abs(nextFocus - lastFocus) < 0.004) return;
   lastFocus = nextFocus;
-  document.documentElement.style.setProperty('--focus', nextFocus.toFixed(3));
+  const value = nextFocus.toFixed(3);
+  softCanvas.style.setProperty('--focus', value);
+  tape.element.style.setProperty('--focus', value);
 }
 
 function resize(): void {
@@ -145,6 +173,19 @@ function resize(): void {
   skyCanvas.style.width = `${width + 48}px`;
   skyCanvas.style.height = `${height + 48}px`;
   skyContext.setTransform(skyDpr, 0, 0, skyDpr, 24 * skyDpr, 24 * skyDpr);
+
+  softCanvas.width = skyCanvas.width;
+  softCanvas.height = skyCanvas.height;
+  softCanvas.style.width = `${width + 48}px`;
+  softCanvas.style.height = `${height + 48}px`;
+  const softScale = 1 / SOFT_DIVISOR;
+  softSmall.width = Math.max(1, Math.round((width + 48) * softScale));
+  softSmall.height = Math.max(1, Math.round((height + 48) * softScale));
+  softSmallContext.setTransform(softScale, 0, 0, softScale, 24 * softScale, 24 * softScale);
+  softBlur.width = softSmall.width;
+  softBlur.height = softSmall.height;
+  softHalf.width = Math.max(1, Math.round(softCanvas.width * 0.5));
+  softHalf.height = Math.max(1, Math.round(softCanvas.height * 0.5));
 
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -180,13 +221,19 @@ function update(dt: number): void {
   env.burst = burstAmount(altitude);
   env.windX = wind.x;
   env.windY = wind.y;
-  env.homeX = width * 0.5 + sections.exit * (reduced ? 0 : 1) * (width * 0.5 + EXIT_CLEARANCE);
   const defaultY = narrow ? 0.17 : anchored ? 0.42 : 0.44;
-  env.homeY = height * defaultY;
+  track.homeY = height * defaultY;
+  track.target = sections.exit;
+  track.update(dt);
+  env.homeX = tracked && !reduced
+    ? track.x(width)
+    : width * 0.5 + sections.exit * (reduced ? 0 : 1) * (width * 0.5 + EXIT_CLEARANCE);
+  env.homeY = tracked && !reduced ? track.y(height) : track.homeY;
   env.padX = width * 0.5;
   env.padY = groundScreenY(altitude, height) - 10;
   env.groundY = groundScreenY(altitude, height) - 4;
   env.reduced = reduced;
+  env.tracked = tracked;
   env.time = time;
 
   balloon.update(dt, env);
@@ -203,7 +250,28 @@ function render(alpha: number): void {
   view.windStrength = windStrength;
   view.reduced = reduced;
 
-  if (focus < 0.99 || skyFrame % 3 === 0) scenery.draw(skyContext, view);
+  const sceneryFrame = skyFrame % 3 === 0;
+  if (focus < 0.99 || sceneryFrame) scenery.draw(skyContext, view);
+  if (focus > 0.005 && sceneryFrame) {
+    // The sharp pass above has already populated altitude-keyed scenery
+    // layers, so this second draw hits those caches instead of rebuilding them.
+    scenery.draw(softSmallContext, view);
+    // One tiny-canvas pixel becomes roughly SOFT_DIVISOR pixels, smoothing hard-edge stairs.
+    softBlurContext.setTransform(1, 0, 0, 1, 0, 0);
+    softBlurContext.filter = 'blur(1px)';
+    softBlurContext.drawImage(softSmall, 0, 0);
+    softBlurContext.filter = 'none';
+    softHalfContext.setTransform(1, 0, 0, 1, 0, 0);
+    softHalfContext.imageSmoothingEnabled = true;
+    softHalfContext.imageSmoothingQuality = 'high';
+    softHalfContext.drawImage(softBlur, 0, 0, softHalf.width, softHalf.height);
+    softContext.setTransform(1, 0, 0, 1, 0, 0);
+    softContext.imageSmoothingEnabled = true;
+    softContext.imageSmoothingQuality = 'high';
+    softContext.drawImage(softHalf, 0, 0, softCanvas.width, softCanvas.height);
+    softContext.fillStyle = 'rgba(0,0,0,0.28)';
+    softContext.fillRect(0, 0, softCanvas.width, softCanvas.height);
+  }
   skyFrame++;
 
   context.clearRect(0, 0, width, height);

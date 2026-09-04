@@ -4,6 +4,8 @@ A weather-balloon-themed portfolio for Suchit Basineni.
 
 Use `npm run dev` for local development, `npm run build` for a production build, and `npm run preview` to preview the production build locally.
 
+Balloon exits default to `DEFAULT_MOTION = 'physics'`; use `?motion=track` for the scripted path or `?motion=physics` to select the default explicitly.
+
 Set the repository's GitHub Pages source to **GitHub Actions** in the repository settings before deploying.
 
 ## Content and imagery
