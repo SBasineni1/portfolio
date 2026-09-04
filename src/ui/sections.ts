@@ -18,7 +18,9 @@ interface Positioned {
   kind: 'panel' | 'station';
   /** Last published reveal amount, 0..1. Starts off-scale to force a write. */
   shown: number;
-  armed: boolean;
+  exit: boolean;
+  gate: number;
+  shownSweep: number;
 }
 
 const km = (m: number): string => (m / 1000).toFixed(1);
@@ -33,8 +35,7 @@ export class Sections {
   private readonly content: HTMLElement;
   private readonly relayouts: (() => void)[] = [];
   private pageHeight = 0;
-  homeX = 0.5;
-  homeY = 0.44;
+  private exitState = 0;
 
   constructor(
     private readonly reduced: () => boolean,
@@ -107,7 +108,9 @@ export class Sections {
           center: 0,
           kind: section.classList.contains('station') ? 'station' : 'panel',
           shown: -1,
-          armed: true,
+          exit: false,
+          gate: 0,
+          shownSweep: -1,
         });
       }
     }
@@ -143,49 +146,48 @@ export class Sections {
   update(
     scrollY: number,
     viewportHeight: number,
-    defaultX: number,
-    defaultY: number,
-    useHomes: boolean,
+    dt: number,
+    balloonClear: boolean,
   ): number {
     let focus = 0;
-    let xTotal = 0;
-    let xWeight = 0;
-    let yTotal = 0;
-    let yWeight = 0;
+    let exit = 0;
     for (const item of this.items) {
       const d = Math.abs(scrollY + viewportHeight * 0.5 - item.center) / viewportHeight;
       const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
       const eased = t * t * (3 - 2 * t);
+      let sweep = eased;
       if (item.kind === 'station') {
         focus = Math.max(focus, eased);
-        if (item.armed && eased >= 0.15) {
+        if (!item.exit && eased >= 0.15) {
+          item.exit = true;
+          item.gate = 0;
           this.onStationEnter(item.band);
-          item.armed = false;
-        } else if (!item.armed && eased < 0.05) {
-          item.armed = true;
+        } else if (item.exit && eased < 0.05) {
+          item.exit = false;
+          item.gate = 0;
         }
+        if (item.exit && (balloonClear || item.gate > 0)) {
+          item.gate = Math.min(1, item.gate + dt / 0.4);
+        }
+        const g = item.gate;
+        sweep = Math.min(eased, g * g * (3 - 2 * g));
+        if (item.exit) exit = 1;
       }
-      if (useHomes && item.band.homeX !== undefined) {
-        xTotal += eased * item.band.homeX;
-        xWeight += eased;
+      if (Math.abs(eased - item.shown) >= 0.004) {
+        item.shown = eased;
+        item.el.style.setProperty('--in', eased.toFixed(3));
       }
-      if (useHomes && item.band.homeY !== undefined) {
-        yTotal += eased * item.band.homeY;
-        yWeight += eased;
+      if (Math.abs(sweep - item.shownSweep) >= 0.004) {
+        item.shownSweep = sweep;
+        item.el.style.setProperty('--sweep', sweep.toFixed(3));
       }
-      if (Math.abs(eased - item.shown) < 0.004) continue;
-      item.shown = eased;
-      const value = eased.toFixed(3);
-      item.el.style.setProperty('--in', value);
-      item.el.style.setProperty('--sweep', value);
     }
-    const xBlend = xWeight > 0 ? xTotal / xWeight : defaultX;
-    const yBlend = yWeight > 0 ? yTotal / yWeight : defaultY;
-    const xPresence = Math.min(1, xWeight);
-    const yPresence = Math.min(1, yWeight);
-    this.homeX = xPresence * xBlend + (1 - xPresence) * defaultX;
-    this.homeY = yPresence * yBlend + (1 - yPresence) * defaultY;
+    this.exitState = exit;
     return focus;
+  }
+
+  get exit(): number {
+    return this.exitState;
   }
 
   get height(): number {

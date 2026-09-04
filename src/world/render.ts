@@ -12,6 +12,7 @@ export interface DrawOptions {
   dark: number;
   reduced: boolean;
   alpha: number;
+  fade: number;
 }
 
 let spriteMix = 0;
@@ -22,6 +23,7 @@ function mix(a: number, b: number, t: number): number {
 }
 
 export function drawBalloon(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions): void {
+  if (o.fade <= 0.005) return;
   const w = b.world;
   const a = o.alpha;
   const inflated = 1 - b.burstAmount;
@@ -39,7 +41,7 @@ export function drawBalloon(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOp
   if (b.releaseFlash > 0) {
     const t = 1 - b.releaseFlash;
     ctx.save();
-    ctx.globalAlpha = b.releaseFlash * 0.6;
+    ctx.globalAlpha = b.releaseFlash * 0.6 * o.fade;
     ctx.strokeStyle = 'rgba(240,162,28,0.9)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -84,7 +86,7 @@ function drawProceduralEnvelope(
   const a = o.alpha;
 
   ctx.save();
-  ctx.globalAlpha = Math.min(1, inflated * 1.6) * opacity;
+  ctx.globalAlpha = Math.min(1, inflated * 1.6) * opacity * o.fade;
   traceRing(ctx, b, a);
 
   const cx = b.centroidX;
@@ -104,7 +106,7 @@ function drawProceduralEnvelope(
 
   // Specular sheen, clipped to the envelope so it never bleeds onto the sky.
   ctx.clip();
-  ctx.globalAlpha = 0.5 * inflated;
+  ctx.globalAlpha = 0.5 * inflated * o.fade;
   ctx.beginPath();
   ctx.ellipse(cx - r * 0.26, cy - r * 0.32, r * 0.17, r * 0.28, -0.5, 0, 6.283);
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
@@ -122,7 +124,7 @@ function drawProceduralEnvelope(
   ctx.save();
   ctx.translate(nx, ny);
   ctx.rotate(Math.atan2(uy, ux) - Math.PI / 2);
-  ctx.globalAlpha = inflated;
+  ctx.globalAlpha = inflated * o.fade;
   ctx.fillStyle = `rgb(${mix(224, 190, d)},${mix(216, 196, d)},${mix(198, 208, d)})`;
   ctx.beginPath();
   ctx.moveTo(-9, -4);
@@ -199,7 +201,7 @@ function drawSpriteEnvelope(
   const ay = envelopeSprite.cy * imageScale;
 
   ctx.save();
-  ctx.globalAlpha = Math.min(1, inflated * 1.6) * opacity;
+  ctx.globalAlpha = Math.min(1, inflated * 1.6) * opacity * o.fade;
   traceRing(ctx, b, a);
   ctx.clip();
   ctx.save();
@@ -234,7 +236,7 @@ function drawShreds(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions): 
     const vy = w.velY(p);
     const ang = Math.atan2(vy, vx);
     const len = 12 + (i % 5) * 5;
-    ctx.globalAlpha = fade * 0.9;
+    ctx.globalAlpha = fade * 0.9 * o.fade;
     ctx.strokeStyle = `rgba(${mix(240, 214, o.dark)},${mix(234, 220, o.dark)},${mix(219, 232, o.dark)},1)`;
     ctx.lineWidth = 2.5 + (i % 3);
     ctx.beginPath();
@@ -251,7 +253,7 @@ function drawParachute(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions
   const n = b.chuteCount;
   const open = b.burstAmount;
   ctx.save();
-  ctx.globalAlpha = Math.min(1, open * 1.4);
+  ctx.globalAlpha = Math.min(1, open * 1.4) * o.fade;
 
   // The chute points are the hem; the canopy is a dome bulged above them.
   const fx = w.rx(b.chute[0], a);
@@ -332,6 +334,7 @@ function drawTether(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions): 
   const w = b.world;
   const a = o.alpha;
   ctx.save();
+  ctx.globalAlpha = o.fade;
   ctx.lineWidth = 1.6;
   ctx.lineJoin = 'round';
   ctx.strokeStyle = `rgba(${mix(48, 214, o.dark)},${mix(52, 220, o.dark)},${mix(58, 232, o.dark)},0.8)`;
@@ -357,7 +360,7 @@ function drawBundle(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions): 
   const scale = 44 / bundleSprite.image.naturalHeight;
 
   ctx.save();
-  ctx.globalAlpha = 1 - b.burstAmount;
+  ctx.globalAlpha = (1 - b.burstAmount) * o.fade;
   ctx.translate(w.rx(b.riser, a), w.ry(b.riser, a));
   ctx.rotate(angle);
   ctx.drawImage(
@@ -380,6 +383,7 @@ function drawPayload(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions):
   const ang = Math.atan2(by - ty, bx - tx) - Math.PI / 2;
 
   ctx.save();
+  ctx.globalAlpha = o.fade;
   ctx.translate((tx + bx) / 2, (ty + by) / 2);
   ctx.rotate(ang);
 
@@ -433,12 +437,12 @@ function drawPayload(ctx: CanvasRenderingContext2D, b: Balloon, o: DrawOptions):
 
   // Status LED.
   const blink = o.reduced ? 0.7 : Math.sin(o.time * 4.2) > 0.35 ? 1 : 0.12;
-  ctx.globalAlpha = blink;
+  ctx.globalAlpha = blink * o.fade;
   ctx.fillStyle = '#f0a21c';
   ctx.beginPath();
   ctx.arc(sondeSprite.ready ? 6 : 9, sondeSprite.ready ? 8 : -1, sondeSprite.ready ? 1.8 : 2.6, 0, 6.283);
   ctx.fill();
-  ctx.globalAlpha = blink * 0.35;
+  ctx.globalAlpha = blink * 0.35 * o.fade;
   ctx.beginPath();
   ctx.arc(sondeSprite.ready ? 6 : 9, sondeSprite.ready ? 8 : -1, sondeSprite.ready ? 4.5 : 6, 0, 6.283);
   ctx.fill();

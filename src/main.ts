@@ -30,6 +30,7 @@ const context = sceneContext;
 const VIEWPORTS = 11;
 const SIM_STEP = 1 / 120;
 const MAX_FRAME = 0.25;
+const EXIT_CLEARANCE = 420;
 
 const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 let reduced = reducedQuery.matches;
@@ -42,6 +43,7 @@ const lowPower = coarse || window.innerWidth < 760 || (navigator.hardwareConcurr
 document.body.classList.toggle('low-power', lowPower);
 
 let focus = 0;
+let hidden = 0;
 
 let width = window.innerWidth;
 let height = window.innerHeight;
@@ -89,7 +91,7 @@ const view: View = {
   reduced,
 };
 
-const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0 };
+const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0, fade: 1 };
 
 /**
  * How far the page ink has crossed from daylight to instrument white, 0..1.
@@ -178,8 +180,9 @@ function update(dt: number): void {
   env.burst = burstAmount(altitude);
   env.windX = wind.x;
   env.windY = wind.y;
-  env.homeX = width * sections.homeX;
-  env.homeY = height * sections.homeY;
+  env.homeX = width * 0.5 + sections.exit * (reduced ? 0 : 1) * (width * 0.5 + EXIT_CLEARANCE);
+  const defaultY = narrow ? 0.17 : anchored ? 0.42 : 0.44;
+  env.homeY = height * defaultY;
   env.padX = width * 0.5;
   env.padY = groundScreenY(altitude, height) - 10;
   env.groundY = groundScreenY(altitude, height) - 4;
@@ -209,6 +212,7 @@ function render(alpha: number): void {
   drawOptions.dark = Math.min(1, Math.max(0, (camera.altitude - 9000) / 15000));
   drawOptions.reduced = reduced;
   drawOptions.alpha = alpha;
+  drawOptions.fade = reduced ? 1 - hidden : 1;
   drawBalloon(context, balloon, drawOptions);
 
   scenery.drawForeground(context, view);
@@ -236,8 +240,9 @@ function frame(timestamp: number): void {
 
   tape.update(currentTime, camera.altitude);
   nav.update(camera.altitude);
-  const defaultY = narrow ? 0.17 : anchored ? 0.42 : 0.44;
-  focus = sections.update(window.scrollY, height, 0.5, defaultY, !narrow);
+  const balloonClear = reduced ? hidden > 0.97 : balloon.leftmostX > width + 8;
+  focus = sections.update(window.scrollY, height, delta, balloonClear);
+  hidden += (sections.exit - hidden) * (1 - Math.exp(-delta * 5));
   syncSignals(camera.altitude, focus);
 
   requestAnimationFrame(frame);
