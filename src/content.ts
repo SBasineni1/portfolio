@@ -8,7 +8,6 @@
 export const site = {
   name: 'Suchit Basineni',
   tagline: 'Atmospheric-scale software, launched from the ground up.', // TODO: replace
-  flight: 'SB-01', // TODO: replace — mission designator shown in the header
   ledes: {
     projects: 'Selected systems, experiments, and tools built to turn ambitious ideas into working software.', // TODO: replace
     experience: 'A flight log of roles, teams, and the practical outcomes delivered along the way.', // TODO: replace

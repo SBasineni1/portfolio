@@ -6,8 +6,9 @@ import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
 import { Scenery, groundScreenY, type View } from './world/scenery';
 import { drawBalloon, type DrawOptions } from './world/render';
 import { loadSprites } from './world/sprites';
-import { Hud, type Phase } from './ui/hud';
+import { Nav } from './ui/nav';
 import { Sections } from './ui/sections';
+import { AltTape } from './ui/tape';
 
 loadSprites();
 
@@ -54,13 +55,13 @@ const sections = new Sections(
     if (!reduced) balloon.gust(GUST_PEAK, 1);
   },
 );
-const hud = new Hud(() => reduced);
+const nav = new Nav(() => reduced);
+const tape = new AltTape();
 
 let driftX = 0;
 let time = 0;
 let anchored = true;
 let windStrength = 0;
-let phase: Phase = 'PAD HOLD';
 let narrow = window.innerWidth < 900;
 
 const env: BalloonEnv = {
@@ -155,19 +156,8 @@ function resize(): void {
 
   narrow = width < 900;
   sections.layout(Math.round(height * VIEWPORTS), height, narrow);
-  hud.layout();
+  tape.layout();
   camera.readFromScroll();
-}
-
-function updatePhase(): void {
-  // Read the scroll-derived burst, not the eased one, so BURST reads as an
-  // event and CHUTE DESCENT only lands once you are well past it.
-  const burst = env.burst;
-  if (burst > 0.6) phase = 'CHUTE DESCENT';
-  else if (balloon.severed) phase = 'BURST';
-  else if (balloon.releaseFlash > 0.08) phase = 'RELEASE';
-  else if (anchored) phase = 'PAD HOLD';
-  else phase = 'ASCENT';
 }
 
 function update(dt: number): void {
@@ -197,7 +187,6 @@ function update(dt: number): void {
   env.time = time;
 
   balloon.update(dt, env);
-  updatePhase();
 }
 
 let skyFrame = 0;
@@ -245,7 +234,8 @@ function frame(timestamp: number): void {
 
   render(accumulator / SIM_STEP);
 
-  hud.update(currentTime, camera.altitude, camera.ascentRate, phase);
+  tape.update(currentTime, camera.altitude);
+  nav.update(camera.altitude);
   const defaultY = narrow ? 0.17 : anchored ? 0.42 : 0.44;
   focus = sections.update(window.scrollY, height, 0.5, defaultY, !narrow);
   syncSignals(camera.altitude, focus);
@@ -264,7 +254,7 @@ resize();
 camera.jumpTo(camera.targetAltitude);
 const relayout = (): void => {
   sections.layout(Math.round(height * VIEWPORTS), height, narrow);
-  hud.layout();
+  tape.layout();
 };
 if (document.fonts) document.fonts.ready.then(relayout);
 window.addEventListener('load', relayout);

@@ -33,7 +33,7 @@ cards with a typographic cover and a tick ruler) and adiprathapa.space (tinted p
 logo / date / role / summary / tags; an education split of cover + text card). Those references
 use rounded cards and per-card accent colours. **Both are adopted as a deliberate, bounded
 exception** to the flat-instrument rules below — see §7. Cards are *content surfaces laid on the
-sky*; the instrument chrome (HUD, tape, trace, ticks, rulers) stays square and flat.
+sky*; the instrument chrome (altitude indicator, trace, ticks, rulers) stays square and flat.
 
 The OpenAI marketing site was also requested as a reference; its capture is pending (the site
 blocks headless capture and needs the Chrome extension). Type ramp and spacing may be retuned
@@ -46,10 +46,9 @@ and climb until the sky runs out. Nothing is a box — every section hangs off a
 trace the way a temperature curve hangs off the pressure axis of a Skew-T, sitting directly
 on the sky with only a haze behind it for legibility.
 
-The signature is **live telemetry as structure**. The HUD reads ALT / TEMP / PRES / ASCENT /
-PHASE off the actual physics simulation, not off a script — the numbers are true. The altitude
-tape on the right is a real axis with real ticks, and each section sits at its own altitude.
-The measurement frame is not decoration around the content; it *is* the navigation.
+The signature is **altitude as structure**. The pilot-style indicator on the right is a real
+axis with real ticks, each section sits at its own altitude, and its readout follows the actual
+simulation. The top tab provides direct section navigation without breaking that spatial model.
 
 Depth is rejected on purpose. The chrome layer is hairlines, ticks, and type — no shadow, no
 radius, no fill. All atmosphere lives in the canvas behind it: the sky gradient, the balloon,
@@ -96,10 +95,10 @@ plus a stacked three-layer `--chrome-halo` glow.
 - Never introduce a colour outside this table. Extend the table first.
 - No greyscale ramp. Hierarchy is `--ink` at three alphas, plus size and family.
 - `--flare` is **rationed**. The complete permitted inventory:
-  1. measurement marks — isobar bullets, the mission separator, the band altitude label,
+  1. measurement marks — isobar bullets and the band altitude label,
   2. the organisation line in an entry,
-  3. the PHASE readout in the HUD,
-  4. **position markers on any axis** — the tape sled on the altitude axis and the current
+  3. the nav icon,
+  4. **position markers on any axis** — the current
      tick of a rail ruler (`.ruler__tick.is-current`),
   5. the global `:focus-visible` ring.
   It is **not** a link colour, **not** a hover colour, and **not** a text underline. Links use
@@ -111,8 +110,8 @@ plus a stacked three-layer `--chrome-halo` glow.
   family (`--card-paper`, `--card-ink`) are fixed and do not follow `--dark`, because `--dark`
   saturates at 7 km while the sky is still blue and a card is a printed object, not sky.
 - Depth is forbidden in the DOM: no `box-shadow`, no `border-radius`, no CSS gradient on UI,
-  with **two documented exceptions**: `.tape__sled` carries a 12px `--flare` glow (a lamp on an
-  instrument axis, not elevation), and **cards** (§5) carry a 16px radius, a hairline frame and,
+  with **two documented exceptions**: the hanging navigation tab has rounded lower corners,
+  and **cards** (§5) carry a 16px radius, a hairline frame and,
   on tinted covers, a bottom-weighted scrim. Cards are content surfaces; do not use either as
   precedent for the chrome layer. `text-shadow` haloes exist for legibility over an
   unpredictable sky, not for depth.
@@ -144,8 +143,8 @@ a measurement.
 | Small body | 12px | 400 | 1.8 | normal | display | `.hero__hint` |
 | Eyebrow | 9.5px | 500 | — | 0.24em | data @78% | uppercase |
 | Meta / dates | 9.5px | 400 | — | 0.12em | data @76% | uppercase, tabular |
-| HUD key | 8.5px | 400 | — | 0.2em | data @76% | uppercase |
-| HUD value | 11.5px | 500 | — | 0.06em | data @88% | tabular |
+| Altitude label | 9px | 400 | — | 0.14em | data @78% | tabular |
+| Altitude value | 12px | 600 | — | 0.04em | data @88% | tabular |
 
 ### Rules
 - **Display type is set solid**: `line-height: 1` at nameplate and section title. Multi-line
@@ -156,20 +155,17 @@ a measurement.
   positive only for uppercase data text. Body text is always `normal`.
 - All measurements — altitudes, dates, pressures, layer names, tags — are set in `--data`,
   condensed, uppercase, `tabular-nums`. Prose is never set in the data face.
-- Body never below 12px. HUD/label text may go smaller because it is uppercase and tracked.
+- Body never below 12px. Instrument labels may go smaller because they are tracked.
 
 ## 4. Spacing & Layout
 
 Base 4px. Layout tokens: `--gutter: clamp(20px, 5vw, 84px)`, `--panel-w: min(452px, 42vw)`,
-`--tape-w: 210px`, `--tape-axis: 84px`, `--trace-gap: 26px`.
+`--tape-w: 120px`, `--alt-axis: 14px`, `--trace-gap: 26px`.
 
-- The tape reserves a full column on the right; panels **and the hero** stop at its edge and
-  never overlap it. Tape stop labels are `nowrap` and grow leftward from the right edge, so
-  anything measured in `ch` must reserve `calc(100vw - --gutter - 108px)` below 900px. Inter's
-  `ch` is ~10% wider than the previous display face — re-check this clearance if the display
-  face ever changes again.
+- The altitude indicator reserves a full column on the right; panels **and the hero** stop at
+  its edge and never overlap it.
 - Sections alternate left/right off the trace; the trace is continuous down the whole page.
-- Breakpoints: 900px (tape narrows to 96px, wide HUD cells drop), 520px (trace gap tightens).
+- Breakpoints: 900px (the altitude indicator narrows to 72px), 520px (nav and trace tighten).
 
 ### Field grid
 A fixed, non-interactive overlay behind all content: 4 columns × 3 rows of `--grid` hairlines
@@ -219,13 +215,9 @@ and a tick crossing the trace. No background, no border, no radius.
 Title row (title left, date right in condensed data face), org line in `--flare`, prose,
 then bullets whose markers are 8px isobar ticks — never dots.
 
-### HUD
-Fixed cells, data face, key over value, `tabular-nums` so digits do not jitter as they update.
-PHASE is the only cell allowed the accent.
-
-### Tape
-Right-hand axis. Ticks, labels at major stops, a sled marking current altitude. Labels are
-condensed data face with `--chrome-halo`.
+### Altitude indicator
+Right-hand moving axis with 250 m ticks, labels each kilometre, and a fixed current-altitude
+box. Labels are condensed data face with `--chrome-halo`.
 
 ### Rail
 `overflow-x: auto`, `scroll-snap-type: x mandatory`, gap 20px, trailing 40vw padding so the

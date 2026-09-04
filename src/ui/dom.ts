@@ -16,3 +16,9 @@ export function anchor(href: string, label: string): HTMLAnchorElement {
   a.target = '_blank';
   return a;
 }
+
+export function need(selector: string): HTMLElement {
+  const node = document.querySelector<HTMLElement>(selector);
+  if (!node) throw new Error(`missing ${selector}`);
+  return node;
+}

@@ -96,7 +96,7 @@ export class Balloon {
   private grabY = 0;
   private gustAccel = 0;
 
-  /** Set by update(), read by the renderer + HUD. */
+  /** Set by update(), read by the renderer and input handling. */
   centroidX = 0;
   centroidY = 0;
   releaseFlash = 0;

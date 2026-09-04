@@ -32,9 +32,10 @@
 
     <a class="skip" href="#about">Skip to content</a>
 
-    <p class="mission" aria-hidden="true">
-      FLIGHT <span data-flight></span> <span class="mission__sep">/</span> RADIOSONDE PORTFOLIO
-    </p>
+    <nav class="nav" aria-label="Sections">
+      <a class="nav__mark" href="#top"><span class="nav__icon" aria-hidden="true"></span><span class="nav__name" data-name>Suchit Basineni</span></a>
+      <ul class="nav__list" data-nav></ul>
+    </nav>
 
     <main id="content">
       <header class="hero" id="top">
@@ -100,18 +101,9 @@
       </section>
     </main>
 
-    <nav class="tape" aria-label="Altitude">
-      <ol class="tape__stops" data-tape-stops></ol>
-      <div class="tape__ticks" data-tape-ticks aria-hidden="true"></div>
-      <div class="tape__sled" data-tape-sled aria-hidden="true"></div>
-    </nav>
-
-    <div class="hud" aria-hidden="true">
-      <div class="hud__cell"><span class="hud__key">ALT</span><span class="hud__val" data-hud-alt>0 M</span></div>
-      <div class="hud__cell"><span class="hud__key">TEMP</span><span class="hud__val" data-hud-temp>+15.0 °C</span></div>
-      <div class="hud__cell"><span class="hud__key">PRES</span><span class="hud__val" data-hud-pres>1013 hPa</span></div>
-      <div class="hud__cell"><span class="hud__key">ASCENT</span><span class="hud__val" data-hud-rate>0.0 M/S</span></div>
-      <div class="hud__cell hud__cell--wide"><span class="hud__key">PHASE</span><span class="hud__val" data-hud-phase>PAD HOLD</span></div>
+    <div class="alt" aria-hidden="true">
+      <div class="alt__strip" data-alt-strip></div>
+      <div class="alt__box" data-alt-box><span class="alt__value" data-alt-value>0</span><span class="alt__unit">M</span></div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>
