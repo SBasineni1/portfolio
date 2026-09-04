@@ -276,7 +276,7 @@ a {
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
   padding: 10px 12px 10px 10px;
   background: #0d0d0d;
   color: #fff;
@@ -317,18 +317,37 @@ a {
   letter-spacing: -0.01em;
 }
 
+/* The icon slot is one of the five jobs --flare is allowed to hold. The glyph
+   inside it is the subject of the whole site, drawn as a silhouette so it still
+   reads at 30px: envelope, neck, tether, sonde. */
 .nav__icon {
-  display: block;
+  display: grid;
+  place-items: center;
   width: 30px;
   height: 30px;
   border-radius: 8px;
   background: var(--flare);
 }
 
+.nav__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: #fff;
+  stroke: #fff;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.nav__icon circle,
+.nav__icon rect,
+.nav__icon path:first-of-type {
+  stroke: none;
+}
+
 .nav__list {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 30px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -352,6 +371,8 @@ a {
   padding: 8px 16px;
   background: #fff;
   color: #0d0d0d;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   border-radius: 999px;
 }
 
@@ -1236,7 +1257,7 @@ body.has-grabbed .hero__hint {
   left: 0;
   right: 0;
   top: 0;
-  height: 2520px;
+  /* Height is written by AltTape from MAX_ALTITUDE x PX_PER_M. */
   will-change: transform;
 }
 
@@ -1244,28 +1265,44 @@ body.has-grabbed .hero__hint {
   position: absolute;
   left: var(--alt-axis);
   height: 1px;
+  background: var(--chrome-hair-strong);
+}
+
+/* Three tick lengths off one axis, the way a real tape reads: 250 m, 500 m,
+   and a labelled kilometre. Only the 250s drop to the quiet hairline. */
+.alt__tick--minor {
+  width: 7px;
   background: var(--chrome-hair);
 }
 
-.alt__tick--minor {
-  width: 6px;
+.alt__tick--mid {
+  width: 11px;
 }
 
 .alt__tick--major {
-  width: 12px;
-  background: var(--chrome-hair-strong);
+  width: 17px;
+  height: 2px;
 }
 
 .alt__label {
   position: absolute;
-  left: 18px;
-  top: -6px;
-  font-size: 9px;
-  font-stretch: 78%;
-  letter-spacing: 0.14em;
+  left: 23px;
+  top: -7px;
+  font-size: 10px;
+  font-weight: 500;
+  font-stretch: 80%;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
   color: var(--chrome-ink-3);
   text-shadow: var(--chrome-halo);
   font-variant-numeric: tabular-nums;
+}
+
+/* Every 5 km is the coarse read you scan for from the corner of the eye. */
+.alt__label--5k {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--chrome-ink);
 }
 
 .alt__ground {
@@ -1281,35 +1318,38 @@ body.has-grabbed .hero__hint {
   opacity: 0.6;
 }
 
+/* The one live telemetry readout left on the site: it is the centre of the
+   instrument, so it is inverted, seated ON the axis, and pointed at it. */
 .alt__box {
   position: absolute;
   top: 50%;
-  left: 6px;
-  right: 10px;
+  left: calc(var(--alt-axis) + 9px);
+  right: 7px;
   transform: translateY(-50%);
-  padding: 5px 8px;
+  padding: 6px 8px;
   background: var(--chrome-ink);
   color: var(--chrome-paper);
-  font-size: 12px;
-  font-weight: 600;
-  font-stretch: 88%;
-  letter-spacing: 0.04em;
+  font-size: 14px;
+  font-weight: 700;
+  font-stretch: 84%;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   transition: background var(--chrome-step), color var(--chrome-step);
 }
 
 .alt__box::before {
   content: '';
   position: absolute;
-  left: -8px;
+  left: -9px;
   top: 50%;
   transform: translateY(-50%);
-  border: 6px solid transparent;
-  border-right: 8px solid var(--chrome-ink);
+  border: 7px solid transparent;
+  border-right: 9px solid var(--chrome-ink);
   border-left: 0;
   transition: border-color var(--chrome-step);
 }
@@ -1318,7 +1358,7 @@ body.has-grabbed .hero__hint {
   font-size: 8px;
   font-weight: 400;
   letter-spacing: 0.16em;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 
 /* ------------------------------------------------------------ mobile --- */
@@ -1326,6 +1366,7 @@ body.has-grabbed .hero__hint {
 @media (max-width: 900px) {
   :root {
     --tape-w: 72px;
+    --alt-axis: 10px;
     --panel-w: min(430px, calc(100vw - var(--gutter) - 92px));
     --trace-gap: 20px;
     --card-pad: 18px;
@@ -1377,17 +1418,41 @@ body.has-grabbed .hero__hint {
   }
 
   .alt__tick--minor {
-    display: none;
+    width: 5px;
   }
 
-  .alt__label:not(.alt__label--5k) {
-    display: none;
+  .alt__tick--mid {
+    width: 8px;
   }
 
-  .alt__box {
-    right: 6px;
-    padding: 4px 6px;
+  .alt__tick--major {
+    width: 12px;
+  }
+
+  .alt__label {
+    left: 16px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .alt__label--5k {
     font-size: 10px;
+  }
+
+  /* 72px of tape will not hold the value and the unit on one line, and a
+     wrapped readout stops looking like an instrument. The unit goes. */
+  .alt__box {
+    left: calc(var(--alt-axis) + 7px);
+    right: 3px;
+    padding: 5px 5px;
+    font-size: 11px;
+    font-stretch: 76%;
+    letter-spacing: 0;
+    justify-content: center;
+  }
+
+  .alt__unit {
+    display: none;
   }
 }
 
@@ -1444,6 +1509,10 @@ body.has-grabbed .hero__hint {
   .station__body,
   .rail > .card {
     transform: none;
+  }
+
+  .station__body {
+    opacity: var(--sweep);
   }
 
   .panel::after {

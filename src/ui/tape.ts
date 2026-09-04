@@ -1,9 +1,13 @@
 import { MAX_ALTITUDE } from '../world/camera';
 import { need } from './dom';
 
+/* Tick rhythm is the instrument's texture: 250 m hairlines, a longer mark every
+   500 m, a labelled kilometre. 0.086 px/m puts the minors ~21px apart — dense
+   enough to read as a moving scale rather than as decoration. */
 const TICK = 250;
+const MID = 500;
 const LABEL = 1000;
-const PX_PER_M = 0.072;
+const PX_PER_M = 0.086;
 const STRIP_H = MAX_ALTITUDE * PX_PER_M;
 
 export class AltTape {
@@ -23,16 +27,19 @@ export class AltTape {
   }
 
   private buildStrip(): void {
+    this.strip.style.height = `${STRIP_H}px`;
+
     for (let a = 0; a <= MAX_ALTITUDE; a += TICK) {
       const major = a % LABEL === 0;
+      const size = major ? 'major' : a % MID === 0 ? 'mid' : 'minor';
       const tick = document.createElement('div');
-      tick.className = `alt__tick alt__tick--${major ? 'major' : 'minor'}`;
+      tick.className = `alt__tick alt__tick--${size}`;
       tick.style.top = `${(MAX_ALTITUDE - a) * PX_PER_M}px`;
       if (major) {
         const label = document.createElement('span');
         label.className = 'alt__label';
         if (a % 5000 === 0) label.classList.add('alt__label--5k');
-        label.textContent = String(a / 1000);
+        label.textContent = a === 0 ? '0' : `${a / 1000}k`;
         tick.append(label);
       }
       this.strip.append(tick);
@@ -69,5 +76,5 @@ export class AltTape {
 function fmt(metres: number): string {
   const digits = String(metres);
   if (digits.length <= 3) return digits;
-  return `${digits.slice(0, -3)}\u2009${digits.slice(-3)}`;
+  return `${digits.slice(0, -3)} ${digits.slice(-3)}`;
 }

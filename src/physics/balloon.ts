@@ -99,6 +99,7 @@ export class Balloon {
   /** Set by update(), read by the renderer and input handling. */
   centroidX = 0;
   centroidY = 0;
+  leftmostX = 0;
   releaseFlash = 0;
 
   constructor(width: number, height: number, lowPower: boolean) {
@@ -398,14 +399,25 @@ export class Balloon {
     // Centroid of the envelope ring.
     let cx = 0;
     let cy = 0;
+    let leftmostX = Infinity;
     for (let i = 0; i < this.ringCount; i++) {
-      cx += w.px[this.ring[i]];
-      cy += w.py[this.ring[i]];
+      const index = this.ring[i];
+      const x = w.px[index];
+      cx += x;
+      cy += w.py[index];
+      if (x < leftmostX) leftmostX = x;
     }
+    for (let i = 0; i < this.ropeCount; i++) {
+      const x = w.px[this.rope[i]];
+      if (x < leftmostX) leftmostX = x;
+    }
+    if (w.px[this.payloadTop] < leftmostX) leftmostX = w.px[this.payloadTop];
+    if (w.px[this.payloadBottom] < leftmostX) leftmostX = w.px[this.payloadBottom];
     cx /= this.ringCount;
     cy /= this.ringCount;
     this.centroidX = cx;
     this.centroidY = cy;
+    this.leftmostX = leftmostX;
 
     // Gravity everywhere.
     for (let i = 0; i < w.count; i++) w.ay[i] += GRAVITY;

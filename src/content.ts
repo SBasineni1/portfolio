@@ -127,14 +127,12 @@ export interface Band {
   from: number;
   to: number;
   layer: string;
-  homeX?: number;
-  homeY?: number;
 }
 
 export const bands: Band[] = [
   { id: 'about', label: 'About', altitude: 260, from: 0, to: 900, layer: 'Surface' },
-  { id: 'projects', label: 'Projects', altitude: 8000, from: 6000, to: 10000, layer: 'Troposphere', homeX: 0.74, homeY: 0.16 },
-  { id: 'experience', label: 'Experience', altitude: 15000, from: 12000, to: 18000, layer: 'Tropopause', homeX: 0.74, homeY: 0.18 },
-  { id: 'education', label: 'Education', altitude: 23000, from: 20000, to: 26000, layer: 'Stratosphere', homeX: 0.22, homeY: 0.16 },
+  { id: 'projects', label: 'Projects', altitude: 8000, from: 6000, to: 10000, layer: 'Troposphere' },
+  { id: 'experience', label: 'Experience', altitude: 15000, from: 12000, to: 18000, layer: 'Tropopause' },
+  { id: 'education', label: 'Education', altitude: 23000, from: 20000, to: 26000, layer: 'Stratosphere' },
   { id: 'contact', label: 'Contact', altitude: 34600, from: 30000, to: 35000, layer: 'Near space' },
 ];
