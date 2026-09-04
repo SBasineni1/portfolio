@@ -37,6 +37,7 @@ export interface BalloonEnv {
   padY: number;
   groundY: number;
   reduced: boolean;
+  tracked: boolean;
   time: number;
 }
 
@@ -457,7 +458,7 @@ export class Balloon {
     }
 
     // Wind, weighted by how much surface each part presents.
-    const wx = env.windX + this.gustAccel;
+    const wx = (env.windX + this.gustAccel) * (env.tracked ? 0.25 : 1);
     const wy = env.windY;
     const ringWind = 1 * inflated + 0.35 * this.burstMix;
     for (let i = 0; i < this.ringCount; i++) {
@@ -498,11 +499,13 @@ export class Balloon {
       // path and the balloon drifts the way a real sonde does.
       const hold = 1 - this.burstMix;
       if (hold > 0.001) {
+        const horizontalGain = env.tracked ? 1 : 0.3;
+        const horizontalDamping = env.tracked ? 1 : 0.3;
         const fy = (env.homeY - cy) * k * hold;
-        const fx = (env.homeX - cx) * k * 0.3 * hold;
+        const fx = (env.homeX - cx) * k * horizontalGain * hold;
         for (let i = 0; i < this.ringCount; i++) {
           const idx = this.ring[i];
-          w.ax[idx] += fx - (w.velX(idx) / dt) * c * 0.3 * hold;
+          w.ax[idx] += fx - (w.velX(idx) / dt) * c * horizontalDamping * hold;
           w.ay[idx] += fy - (w.velY(idx) / dt) * c * hold;
         }
       }
@@ -520,11 +523,13 @@ export class Balloon {
         // Stiffer than the envelope hold: the canopy is carrying the payload,
         // so a soft spring would sag it off the bottom of the screen.
         const ck = k * 2.4;
+        const horizontalGain = env.tracked ? 1 : 0.3;
+        const horizontalDamping = env.tracked ? 1 : 0.4;
         const fy = (env.homeY - 120 - ay) * ck * this.burstMix;
-        const fx = (env.homeX - ax) * ck * 0.3 * this.burstMix;
+        const fx = (env.homeX - ax) * ck * horizontalGain * this.burstMix;
         for (let i = 0; i < this.chuteCount; i++) {
           const idx = this.chute[i];
-          w.ax[idx] += fx - (w.velX(idx) / dt) * c * 0.4 * this.burstMix;
+          w.ax[idx] += fx - (w.velX(idx) / dt) * c * horizontalDamping * this.burstMix;
           w.ay[idx] += fy - (w.velY(idx) / dt) * c * 1.4 * this.burstMix;
         }
       }

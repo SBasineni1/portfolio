@@ -102,7 +102,6 @@ export class Scenery {
   private ridgeLayer: HTMLCanvasElement | undefined;
   private groundLayer: HTMLCanvasElement | undefined;
   private lastCloudAltitude = Number.POSITIVE_INFINITY;
-  private lastCloudDrift = Number.POSITIVE_INFINITY;
   private readonly cloudX = new Float32Array(CLOUD_COUNT);
   private readonly cloudAlt = new Float32Array(CLOUD_COUNT);
   private readonly cloudScale = new Float32Array(CLOUD_COUNT);
@@ -162,7 +161,7 @@ export class Scenery {
   resize(width: number, height: number): void {
     const divisor = this.layerDivisor;
     const cloudLayer = document.createElement('canvas');
-    cloudLayer.width = Math.ceil(width / divisor);
+    cloudLayer.width = Math.ceil((CLOUD_SPAN + width) / divisor);
     cloudLayer.height = Math.ceil(height / divisor);
     const cloudLayerContext = cloudLayer.getContext('2d');
     if (!cloudLayerContext) throw new Error('2D cloud layer context is unavailable.');
@@ -192,7 +191,6 @@ export class Scenery {
     this.renderGround();
     this.renderCirrus(width, height);
     this.lastCloudAltitude = Number.POSITIVE_INFINITY;
-    this.lastCloudDrift = Number.POSITIVE_INFINITY;
   }
 
   draw(ctx: CanvasRenderingContext2D, v: View): void {
@@ -335,16 +333,19 @@ export class Scenery {
     const layer = this.cloudLayer;
     const layerCtx = this.cloudLayerContext;
     if (!layer || !layerCtx) return;
-    if (Math.abs(v.altitude - this.lastCloudAltitude) > 2 || Math.abs(v.driftX - this.lastCloudDrift) > 0.5) {
+    if (Math.abs(v.altitude - this.lastCloudAltitude) > 2) {
       this.renderCloudLayer(v);
       this.lastCloudAltitude = v.altitude;
-      this.lastCloudDrift = v.driftX;
     }
     const fade = Math.min(1, Math.max(0, (14000 - v.altitude) / 2500));
+    const span = CLOUD_SPAN + v.width;
+    let offset = (-v.driftX * 0.45) % span;
+    if (offset < 0) offset += span;
     ctx.save();
     ctx.globalAlpha = fade;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, v.width, v.height);
+    ctx.drawImage(layer, -offset, 0, span, v.height);
+    ctx.drawImage(layer, span - offset, 0, span, v.height);
     ctx.restore();
   }
 
@@ -352,6 +353,7 @@ export class Scenery {
     const ctx = this.cloudLayerContext;
     if (!ctx) return;
     const divisor = this.layerDivisor;
+    const span = CLOUD_SPAN + v.width;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     for (let i = 0; i < CLOUD_COUNT; i++) {
       const scale = this.cloudScale[i];
@@ -364,37 +366,41 @@ export class Scenery {
         + Math.max(0, v.altitude - 6000) * 0.018;
       const sy = eyeLevelY + (deckY - eyeLevelY) * overhead;
       if (sy < -220 || sy > v.height + 220) continue;
-      const span = CLOUD_SPAN + v.width;
-      let x = (this.cloudX[i] + v.driftX * 0.45) % span;
+      let x = this.cloudX[i] % span;
       if (x < 0) x += span;
       x -= 260;
+      if (x < 0) x += span;
       const proximity = 1 - Math.min(1, Math.abs(this.cloudAlt[i] - v.altitude) / 7000);
       const alpha = 0.3 * (0.2 + proximity * 0.8);
       const high = Math.min(1, Math.max(0, (v.altitude - 6000) / 6000));
       const perspective = v.altitude < 6000 ? 0.62 : 0.28 - high * 0.14;
       const flatten = 1 - high * 0.52;
-      ctx.globalAlpha = alpha * 0.82;
-      for (let p = 0; p < 4; p++) {
-        const q = i * PUFFS + p;
-        const radius = this.puffR[q] * scale * perspective;
-        const cx = (x + this.puffX[q] * scale * perspective) / divisor;
-        const cy = (sy + 16 * scale * perspective) / divisor;
-        ctx.drawImage(this.brushShade, cx - radius / divisor, cy - radius * 0.625 / divisor, radius * 2 / divisor, radius * 1.25 / divisor);
-      }
-      ctx.globalAlpha = alpha * 0.92;
-      for (let p = 0; p < 5; p++) {
-        const q = i * PUFFS + p;
-        const radius = this.puffR[q] * scale * perspective;
-        const cx = (x + this.puffX[q] * scale * perspective - radius * 0.18) / divisor;
-        const cy = (sy + this.puffY[q] * scale * perspective - radius * 0.46) / divisor;
-        ctx.drawImage(this.brushSoft, cx - radius / divisor, cy - radius * flatten / divisor, radius * 2 / divisor, radius * 2 * flatten / divisor);
-      }
-      const crown = i * PUFFS + 2;
-      const crownRadius = this.puffR[crown] * scale * perspective * 0.62;
-      const crownX = (x + this.puffX[crown] * scale * perspective - crownRadius * 0.35) / divisor;
-      const crownY = (sy + this.puffY[crown] * scale * perspective - crownRadius * 1.15) / divisor;
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(this.brushCrown, crownX - crownRadius / divisor, crownY - crownRadius * flatten / divisor, crownRadius * 2 / divisor, crownRadius * 2 * flatten / divisor);
+      const drawCloud = (stampX: number): void => {
+        ctx.globalAlpha = alpha * 0.82;
+        for (let p = 0; p < 4; p++) {
+          const q = i * PUFFS + p;
+          const radius = this.puffR[q] * scale * perspective;
+          const cx = (stampX + this.puffX[q] * scale * perspective) / divisor;
+          const cy = (sy + 16 * scale * perspective) / divisor;
+          ctx.drawImage(this.brushShade, cx - radius / divisor, cy - radius * 0.625 / divisor, radius * 2 / divisor, radius * 1.25 / divisor);
+        }
+        ctx.globalAlpha = alpha * 0.92;
+        for (let p = 0; p < 5; p++) {
+          const q = i * PUFFS + p;
+          const radius = this.puffR[q] * scale * perspective;
+          const cx = (stampX + this.puffX[q] * scale * perspective - radius * 0.18) / divisor;
+          const cy = (sy + this.puffY[q] * scale * perspective - radius * 0.46) / divisor;
+          ctx.drawImage(this.brushSoft, cx - radius / divisor, cy - radius * flatten / divisor, radius * 2 / divisor, radius * 2 * flatten / divisor);
+        }
+        const crown = i * PUFFS + 2;
+        const crownRadius = this.puffR[crown] * scale * perspective * 0.62;
+        const crownX = (stampX + this.puffX[crown] * scale * perspective - crownRadius * 0.35) / divisor;
+        const crownY = (sy + this.puffY[crown] * scale * perspective - crownRadius * 1.15) / divisor;
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(this.brushCrown, crownX - crownRadius / divisor, crownY - crownRadius * flatten / divisor, crownRadius * 2 / divisor, crownRadius * 2 * flatten / divisor);
+      };
+      drawCloud(x);
+      if (x > span - 520) drawCloud(x - span);
     }
     ctx.globalAlpha = 1;
   }

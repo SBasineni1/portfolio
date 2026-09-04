@@ -34,7 +34,7 @@
 @property --focus {
   syntax: '<number>';
   initial-value: 0;
-  inherits: true;
+  inherits: false;
 }
 
 @property --in {
@@ -132,10 +132,6 @@ body.sky-dark {
   --chrome-paper: var(--ink-day);
 }
 
-body.low-power {
-  --focus-blur: 6px;
-}
-
 *,
 *::before,
 *::after {
@@ -163,7 +159,8 @@ body {
   overflow-x: hidden;
 }
 
-canvas#sky {
+canvas#sky,
+canvas#sky-soft {
   position: fixed;
   top: -24px;
   left: -24px;
@@ -171,9 +168,11 @@ canvas#sky {
   height: calc(100% + 48px);
   z-index: 0;
   pointer-events: none;
-  will-change: filter;
-  filter: blur(calc(var(--focus) * var(--focus-blur, 14px)))
-    brightness(calc(1 - var(--focus) * 0.28));
+}
+
+canvas#sky-soft {
+  opacity: var(--focus);
+  will-change: opacity;
 }
 
 canvas#scene {
@@ -272,7 +271,8 @@ a {
 .nav {
   position: fixed;
   top: 0;
-  left: var(--gutter);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 30;
   display: flex;
   align-items: center;
@@ -399,17 +399,6 @@ a {
   pointer-events: auto;
 }
 
-.eyebrow {
-  margin: 0 0 22px;
-  font-family: var(--data);
-  font-stretch: 78%;
-  font-weight: 500;
-  font-size: 9.5px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
 /* The nameplate: expanded grotesque, set like the label stencilled on the
    side of the payload box it is riding in. */
 .hero__name {
@@ -473,6 +462,7 @@ body.has-grabbed .hero__hint {
   pointer-events: auto;
   opacity: var(--in);
   transform: translateY(calc((1 - var(--in)) * 22px));
+  will-change: opacity, transform;
 }
 
 /* Haze: a blurred shape rather than a filled box. A gradient always has to
@@ -771,6 +761,7 @@ body.has-grabbed .hero__hint {
   padding-left: var(--gutter);
   opacity: var(--in);
   pointer-events: auto;
+  will-change: opacity;
 }
 
 .station__head {
@@ -800,6 +791,7 @@ body.has-grabbed .hero__hint {
 
 .station__body {
   transform: translateX(calc((1 - var(--sweep)) * 60vw));
+  will-change: transform;
 }
 
 .rail {
@@ -833,6 +825,11 @@ body.has-grabbed .hero__hint {
 
 .rail > .card {
   transform: translateX(calc((1 - var(--sweep)) * var(--i, 0) * 8vw));
+  will-change: transform;
+}
+
+body.low-power .rail > .card {
+  will-change: auto;
 }
 
 .rail::-webkit-scrollbar {
@@ -1462,7 +1459,6 @@ body.has-grabbed .hero__hint {
   }
 
   .nav {
-    left: 12px;
     gap: 16px;
     padding: 8px 10px;
   }
