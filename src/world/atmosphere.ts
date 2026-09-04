@@ -80,14 +80,23 @@ function lerp3(
 
 export type SkyBand = 'top' | 'upper' | 'mid' | 'haze' | 'low';
 
+const DUSK: Record<SkyBand, [number, number, number]> = {
+  top: [0, 0, 0],
+  upper: [0, 0, 0],
+  mid: [150, 180, 215],
+  haze: [246, 205, 160],
+  low: [242, 186, 138],
+};
+
 /** rgb() string for one band of the sky gradient at a given altitude. */
-export function skyColor(altitude: number, band: SkyBand, alpha = 1): string {
+export function skyColor(altitude: number, band: SkyBand, alpha = 1, warm = 0): string {
   let i = 0;
   while (i < SKY.length - 2 && altitude > SKY[i + 1].alt) i++;
   const a = SKY[i];
   const b = SKY[i + 1];
   const t = Math.min(1, Math.max(0, (altitude - a.alt) / (b.alt - a.alt)));
   lerp3(a[band], b[band], t, scratch);
+  if (band !== 'top' && band !== 'upper') lerp3(scratch, DUSK[band], warm, scratch);
   const r = Math.round(scratch[0]);
   const g = Math.round(scratch[1]);
   const bl = Math.round(scratch[2]);
