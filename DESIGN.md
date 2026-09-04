@@ -49,6 +49,9 @@ on the sky with only a haze behind it for legibility.
 The signature is **altitude as structure**. The pilot-style indicator on the right is a real
 axis with real ticks, each section sits at its own altitude, and its readout follows the actual
 simulation. The top tab provides direct section navigation without breaking that spatial model.
+Two instruments stay fixed for the whole flight: the top-left navigation tab and the right-hand
+altitude indicator. Nothing else is fixed chrome any more — the mission strip and telemetry HUD
+are gone.
 
 Depth is rejected on purpose. The chrome layer is hairlines, ticks, and type — no shadow, no
 radius, no fill. All atmosphere lives in the canvas behind it: the sky gradient, the balloon,
@@ -63,10 +66,19 @@ a soft body**: envelope, packed-chute bundle and sonde sprites are drawn over th
 the envelope clipped to the ring's real silhouette and deformed by a neck-frame affine fit, so a
 grab still pinches it and pressure still bulges it.
 
-Moving between stations is a **wind gust**. Entering a station fires one decaying horizontal
-impulse through the wind path — the balloon leans right, the tether whips, the sonde trails —
-while the canvas streaks spike and the station's cards sweep in from the right on the same
-scroll-linked signal. The balloon then parks at a per-station home above the cards.
+The launch site is a desert at golden hour: dunes, scrub and a purple-brown ridge behind a pale
+launch pad, tether reel, ground station and a windsock that reads the live wind. Below 2 km the
+sky's mid, haze and low bands blend toward warm `dusk` tints and the sun sits lower and warmer;
+above 2 km the palette is the untouched day gradient.
+
+Moving between stations is not a simple park-and-forget. Entering a station latches an **exit**:
+the station-keeping home moves from mid-screen out to `width + EXIT_CLEARANCE`, and one decaying
+gust impulse kicks the balloon toward it — it leans right, the tether whips, the sonde trails,
+canvas streaks spike. The station's cards sweep in only once the balloon's leftmost point has
+cleared the viewport: a 0.4s gate that, once it starts, latches open regardless of what the
+balloon does afterward. When the station falls out of view the exit releases and the balloon
+drifts back in from the right. Reduced motion never moves the assembly — it fades in (`fade`) on
+the same gate instead.
 
 ## 2. Color
 
@@ -86,6 +98,7 @@ so there is no threshold and no light-switch moment.
 | Grid tick | `--grid-tick` | `--ink` @ 30% | Crosshair marks |
 | Sky | — | `#7ea7cd` | Body background under the canvas |
 | Accent | `--flare` | `color-mix(in oklab, #d1521c, #f4a052, --dark)` | See rationing below |
+| Chrome paper | `--chrome-paper` | `--ink-space`, flips to `--ink-day` under `.sky-dark` | Readout text on the altitude box |
 
 Chrome that is on screen for the whole flight (`--chrome-*`) **steps** rather than blends —
 it sits over an unpredictable sky and needs to stay legible, so it switches with `.sky-dark`
@@ -97,9 +110,8 @@ plus a stacked three-layer `--chrome-halo` glow.
 - `--flare` is **rationed**. The complete permitted inventory:
   1. measurement marks — isobar bullets and the band altitude label,
   2. the organisation line in an entry,
-  3. the nav icon,
-  4. **position markers on any axis** — the current
-     tick of a rail ruler (`.ruler__tick.is-current`),
+  3. the nav icon — the balloon glyph's background in the nav tab,
+  4. the ruler's current tick (`.ruler__tick.is-current`),
   5. the global `:focus-visible` ring.
   It is **not** a link colour, **not** a hover colour, and **not** a text underline. Links use
   the bracket frame in §5; emphasis rules use `--hair-strong`. Adding a sixth job flattens
@@ -110,11 +122,11 @@ plus a stacked three-layer `--chrome-halo` glow.
   family (`--card-paper`, `--card-ink`) are fixed and do not follow `--dark`, because `--dark`
   saturates at 7 km while the sky is still blue and a card is a printed object, not sky.
 - Depth is forbidden in the DOM: no `box-shadow`, no `border-radius`, no CSS gradient on UI,
-  with **two documented exceptions**: the hanging navigation tab has rounded lower corners,
-  and **cards** (§5) carry a 16px radius, a hairline frame and,
-  on tinted covers, a bottom-weighted scrim. Cards are content surfaces; do not use either as
-  precedent for the chrome layer. `text-shadow` haloes exist for legibility over an
-  unpredictable sky, not for depth.
+  with **two documented exceptions**: the navigation tab — black, 18px bottom radius, 20×20
+  inverted-corner flares, adopted from the user's supaste.com reference — and **cards** (§5),
+  which carry a 16px radius, a hairline frame and, on tinted covers, a bottom-weighted scrim.
+  Cards are content surfaces; do not use either as precedent for the chrome layer. `text-shadow`
+  haloes exist for legibility over an unpredictable sky, not for depth.
 
 ## 3. Typography
 
@@ -160,7 +172,7 @@ a measurement.
 ## 4. Spacing & Layout
 
 Base 4px. Layout tokens: `--gutter: clamp(20px, 5vw, 84px)`, `--panel-w: min(452px, 42vw)`,
-`--tape-w: 120px`, `--alt-axis: 14px`, `--trace-gap: 26px`.
+`--tape-w: 120px` (72px at ≤900px), `--alt-axis: 14px`, `--trace-gap: 26px`.
 
 - The altitude indicator reserves a full column on the right; panels **and the hero** stop at
   its edge and never overlap it.
@@ -179,8 +191,7 @@ Projects, Experience and Education are `.station` sections: full width minus the
 panels, height ≤ 0.82 viewport. A station is head (band annotation, solid-set title, lede ≤ 48ch,
 ruler at the right) over a body: a horizontal `.rail` of cards, or the education split. Below
 900px the tape collapses to labels and the rail dissolves under them with a mask over its last
-104px. The balloon parks per station (`Band.homeX/homeY`, wide screens only): top-right for
-Projects and Experience, top-left for Education, always above the card strip.
+104px. The balloon exits right while a station is in view.
 
 ## 5. Components
 
@@ -216,8 +227,16 @@ Title row (title left, date right in condensed data face), org line in `--flare`
 then bullets whose markers are 8px isobar ticks — never dots.
 
 ### Altitude indicator
-Right-hand moving axis with 250 m ticks, labels each kilometre, and a fixed current-altitude
-box. Labels are condensed data face with `--chrome-halo`.
+Pilot-style: a scrolling strip built from `tape.ts` at the real 0.086 px/m, three tick lengths
+(250 m minor, 500 m mid, 1 km major), `k`-suffixed kilometre labels with a bolder read every
+5 km, and a seated readout box whose pointer lands on the axis. It is the only live telemetry
+left on the page.
+
+### Navigation tab
+Supaste-derived: fixed top-left, black, hanging from the top edge with 18px bottom corners and
+20×20 inverted-corner flares. A 30px balloon-glyph icon plus wordmark, Inter 14px links, and
+Contact set as a white pill CTA. `is-current` is driven by the band altitude thresholds; items
+scroll via `scrollToAltitude`.
 
 ### Rail
 `overflow-x: auto`, `scroll-snap-type: x mandatory`, gap 20px, trailing 40vw padding so the
@@ -259,14 +278,21 @@ One 1×14px `--hair-strong` tick per card, the current one 2×20px in `--flare`,
 - Durations: 0.3s interaction, 0.26s chrome step, 0.8s section entrance.
 - `--dark`, `--in`, `--sweep` and `--focus` are **continuous scroll-linked signals**, so nothing
   needs a colour transition — the change is already smooth. Do not add one. `--focus` (max
-  station presence) blurs and dims `#sky`; `--sweep` (an inheriting copy of `--in`) drives the
-  station body's `translateX((1 − sweep) · 60vw)` and the per-card `--i · 8vw` stagger.
-- **The gust** is physics, not CSS: one impulse of `GUST_PEAK` through the balloon's wind path,
-  decaying with a 0.35s time constant, fired when a station's `--in` crosses 0.15 upward and
-  re-armed below 0.05. It overshoots the parking point by ~100px and recovers in about a second.
+  station presence) blurs and dims `#sky`; `--sweep` drives the station body's
+  `translateX((1 − sweep) · 60vw)` and the per-card `--i · 8vw` stagger (see the next bullet for
+  how `--sweep` is actually derived on a station).
+- **Exit → gate → sweep** replaces a threshold class. A station's `--in` crossing 0.15 upward
+  latches `exit` and fires one `GUST_PEAK` impulse through the balloon's wind path (0.35s decay);
+  crossing back below 0.05 releases it — 0.15/0.05 hysteresis so a jittery scroll can't chatter.
+  While exited, the station-keeping home moves out to `width + EXIT_CLEARANCE` (420px past the
+  edge). The station body does not sweep on `--in` alone: a gate advances over 0.4s once the
+  balloon's leftmost point clears the viewport, and once started keeps advancing regardless —
+  it latches. `--sweep` is `smoothstep(gate)` min'd with `--in` itself, so a station can never
+  sweep in further than it has already faded in.
 - Motion must signal state. No decorative animation on non-interactive elements.
-- Honour `prefers-reduced-motion`: no gust impulse, no sweep transform (fade only), calm wind.
-  The blur is legibility, not motion, and stays on.
+- Honour `prefers-reduced-motion`: no gust impulse, no translation at all. The station body's
+  opacity tracks `--sweep` directly (`fade`) instead of a transform, and wind stays calm. The
+  blur is legibility, not motion, and stays on.
 
 ## 7. Depth
 
