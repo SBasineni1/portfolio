@@ -30,12 +30,8 @@ export class Camera {
   altitude = 0;
   /** Raw altitude straight off the scroll position. */
   targetAltitude = 0;
-  /** m/s, smoothed, for the HUD ascent readout. */
-  ascentRate = 0;
   /** 0..1 across the whole page. */
   progress = 0;
-
-  private lastAltitude = 0;
 
   readFromScroll(): void {
     const range = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
@@ -47,16 +43,11 @@ export class Camera {
     // Critically-damped-ish follow so flicking the scrollbar still reads as flight.
     const k = 1 - Math.exp(-dt * 6.5);
     this.altitude += (this.targetAltitude - this.altitude) * k;
-    const instantaneous = (this.altitude - this.lastAltitude) / dt;
-    this.lastAltitude = this.altitude;
-    this.ascentRate += (instantaneous - this.ascentRate) * (1 - Math.exp(-dt * 3));
   }
 
   jumpTo(altitude: number): void {
     this.altitude = altitude;
     this.targetAltitude = altitude;
-    this.lastAltitude = altitude;
-    this.ascentRate = 0;
   }
 }
 

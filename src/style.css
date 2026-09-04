@@ -100,8 +100,9 @@
   --data: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* The tape reserves a full column on the right; panels stop at its edge. */
-  --tape-w: 210px;
-  --tape-axis: 84px;
+  --tape-w: 120px;
+  --alt-axis: 14px;
+  --chrome-paper: var(--ink-space);
   --gutter: clamp(20px, 5vw, 84px);
   --panel-w: min(452px, 42vw);
   --trace-gap: 26px;
@@ -128,6 +129,7 @@ body.sky-dark {
   --chrome-hair-strong: color-mix(in srgb, var(--ink-space) 66%, transparent);
   --chrome-halo: 0 0 2px rgba(2, 6, 12, 0.96), 0 0 6px rgba(2, 6, 12, 0.88),
     0 0 15px rgba(2, 6, 12, 0.68);
+  --chrome-paper: var(--ink-day);
 }
 
 body.low-power {
@@ -266,27 +268,97 @@ a {
   transform: none;
 }
 
-/* ------------------------------------------------------- mission id --- */
-
-.mission {
+/* The black hanging tab deliberately breaks from the site's flat chrome. */
+.nav {
   position: fixed;
-  top: 18px;
+  top: 0;
   left: var(--gutter);
-  z-index: 20;
-  margin: 0;
-  font-family: var(--data);
-  font-stretch: 78%;
-  font-weight: 500;
-  font-size: 9.5px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--chrome-ink);
-  text-shadow: var(--chrome-halo);
-  transition: color var(--chrome-step), text-shadow var(--chrome-step);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 10px 12px 10px 10px;
+  background: #0d0d0d;
+  color: #fff;
+  border-radius: 0 0 18px 18px;
+  font-family: var(--display);
 }
 
-.mission__sep {
-  color: var(--flare);
+.nav::before,
+.nav::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  background: #0d0d0d;
+}
+
+.nav::before {
+  left: -20px;
+  -webkit-mask: radial-gradient(circle at 0 100%, transparent 20px, #000 20.5px);
+  mask: radial-gradient(circle at 0 100%, transparent 20px, #000 20.5px);
+}
+
+.nav::after {
+  right: -20px;
+  -webkit-mask: radial-gradient(circle at 100% 100%, transparent 20px, #000 20.5px);
+  mask: radial-gradient(circle at 100% 100%, transparent 20px, #000 20.5px);
+}
+
+.nav__mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.nav__icon {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--flare);
+}
+
+.nav__list {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav__item {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  transition: color 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.nav__item:hover,
+.nav__item.is-current {
+  color: #fff;
+}
+
+.nav__item--cta {
+  padding: 8px 16px;
+  background: #fff;
+  color: #0d0d0d;
+  border-radius: 999px;
+}
+
+.nav__item--cta:hover,
+.nav__item--cta.is-current {
+  background: #fff;
+  color: #0d0d0d;
 }
 
 /* ------------------------------------------------------------ layout --- */
@@ -300,7 +372,7 @@ a {
 
 .hero {
   position: absolute;
-  top: 14vh;
+  top: max(14vh, 84px);
   left: var(--gutter);
   width: min(620px, 80vw);
   pointer-events: auto;
@@ -1133,9 +1205,9 @@ body.has-grabbed .hero__hint {
   text-transform: uppercase;
 }
 
-/* -------------------------------------------------------------- tape --- */
+/* ------------------------------------------------------ altitude tape --- */
 
-.tape {
+.alt {
   position: fixed;
   top: 0;
   right: 0;
@@ -1143,193 +1215,125 @@ body.has-grabbed .hero__hint {
   width: var(--tape-w);
   z-index: 30;
   pointer-events: none;
+  overflow: hidden;
   font-family: var(--data);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
 }
 
-.tape::before {
+.alt::before {
   content: '';
   position: absolute;
-  top: 6vh;
-  bottom: 12vh;
-  right: var(--tape-axis);
+  top: 0;
+  bottom: 0;
+  left: var(--alt-axis);
   width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    var(--chrome-hair) 12%,
-    var(--chrome-hair) 88%,
-    transparent
-  );
-  transition: background var(--chrome-step);
+  background: var(--chrome-hair-strong);
 }
 
-.tape__ticks,
-.tape__stops {
+.alt__strip {
   position: absolute;
-  top: 6vh;
-  bottom: 12vh;
-  right: 0;
   left: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  right: 0;
+  top: 0;
+  height: 2520px;
+  will-change: transform;
 }
 
-.tick {
+.alt__tick {
   position: absolute;
-  right: var(--tape-axis);
+  left: var(--alt-axis);
   height: 1px;
   background: var(--chrome-hair);
-  transition: background-color var(--chrome-step);
 }
 
-.tick--minor {
-  width: 5px;
+.alt__tick--minor {
+  width: 6px;
 }
 
-.tick--major {
+.alt__tick--major {
   width: 12px;
   background: var(--chrome-hair-strong);
 }
 
-.tick__label {
+.alt__label {
   position: absolute;
   left: 18px;
-  top: -7px;
-  font-stretch: 76%;
-  font-weight: 400;
-  font-size: 8.5px;
-  letter-spacing: 0.2em;
-  white-space: nowrap;
+  top: -6px;
+  font-size: 9px;
+  font-stretch: 78%;
+  letter-spacing: 0.14em;
   color: var(--chrome-ink-3);
   text-shadow: var(--chrome-halo);
   font-variant-numeric: tabular-nums;
-  transition: color var(--chrome-step), text-shadow var(--chrome-step);
 }
 
-.tape__stop {
+.alt__ground {
   position: absolute;
-  right: calc(var(--tape-axis) + 16px);
-  transform: translateY(-50%);
-}
-
-.tape__stop a {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 0;
-  text-decoration: none;
-  font-stretch: 78%;
-  font-weight: 500;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--chrome-ink);
-  text-shadow: var(--chrome-halo);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color var(--chrome-step), text-shadow var(--chrome-step);
-}
-
-.tape__stop a::after {
-  content: '';
-  width: 16px;
-  height: 1px;
-  background: currentColor;
-  transition: width 0.2s ease-out;
-}
-
-.tape__stop a:hover,
-.tape__stop.is-current a {
-  color: var(--flare);
-}
-
-.tape__stop a:hover::after {
-  width: 24px;
-}
-
-/* Current altitude, riding the axis. */
-.tape__sled {
-  position: absolute;
-  right: calc(var(--tape-axis) - 4px);
-  width: 9px;
-  height: 9px;
-  background: var(--flare);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--flare) 70%, transparent);
-  transform: translateY(-50%) rotate(45deg);
-}
-
-/* --------------------------------------------------------------- hud ---
-   The one place a surface is honest: this is the instrument readout, so it
-   sits on a gradient that fades up into the sky with no top edge of its own. */
-
-.hud {
-  position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  padding: 0 var(--tape-w) 0 var(--gutter);
-  font-family: var(--data);
-  background: linear-gradient(180deg, rgba(4, 9, 18, 0), rgba(4, 9, 18, 0.86) 58%);
-  pointer-events: none;
+  height: 600px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--chrome-hair) 0 1px,
+    transparent 1px 8px
+  );
+  opacity: 0.6;
 }
 
-.hud__cell {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  padding: 14px 20px 15px;
-}
-
-.hud__cell:first-child {
-  padding-left: 0;
-}
-
-.hud__key {
-  font-stretch: 76%;
-  font-weight: 400;
-  font-size: 8.5px;
-  letter-spacing: 0.2em;
-  color: rgba(233, 241, 248, 0.42);
-}
-
-.hud__val {
+.alt__box {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  right: 10px;
+  transform: translateY(-50%);
+  padding: 5px 8px;
+  background: var(--chrome-ink);
+  color: var(--chrome-paper);
+  font-size: 12px;
+  font-weight: 600;
   font-stretch: 88%;
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  color: #e9f1f8;
+  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  transition: background var(--chrome-step), color var(--chrome-step);
 }
 
-.hud__cell--wide .hud__val {
-  color: #f4a052;
+.alt__box::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right: 8px solid var(--chrome-ink);
+  border-left: 0;
+  transition: border-color var(--chrome-step);
+}
+
+.alt__unit {
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  opacity: 0.8;
 }
 
 /* ------------------------------------------------------------ mobile --- */
 
 @media (max-width: 900px) {
   :root {
-    --tape-w: 96px;
-    --tape-axis: 12px;
+    --tape-w: 72px;
     --panel-w: min(430px, calc(100vw - var(--gutter) - 92px));
     --trace-gap: 20px;
     --card-pad: 18px;
-    /* Must clear the tape stop labels, which are nowrap and grow leftward
-       from the right edge — the rail bleeds under that column. */
-    --rail-fade: 104px;
+    --rail-fade: 64px;
   }
 
-  /* The hero has to reserve the tape column the same way --panel-w does. Tape
-     stop labels are nowrap and grow leftward from the right edge, so a hero
-     measured in `ch` collides with the longest label. Inter's `ch` is ~10%
-     wider than the previous display face, which is what surfaced this. */
   .hero {
-    width: min(620px, calc(100vw - var(--gutter) - 108px));
+    width: calc(100vw - var(--gutter) - var(--tape-w));
   }
 
   .panel--right {
@@ -1368,51 +1372,50 @@ body.has-grabbed .hero__hint {
     padding-right: calc(var(--gutter) + var(--tape-w));
   }
 
-  /* Condensed tape: no ruler, just labelled stops and the marker. */
-  .tape::before,
-  .tick {
+  .alt {
+    opacity: calc(1 - var(--focus) * 0.85);
+  }
+
+  .alt__tick--minor {
     display: none;
   }
 
-  .tape__stop {
-    right: 20px;
-  }
-
-  .tape__stop a {
-    font-size: 8px;
-    letter-spacing: 0.18em;
-  }
-
-  .tape__stop a::after {
+  .alt__label:not(.alt__label--5k) {
     display: none;
   }
 
-  /* With a station on screen the tape has no ruler left to read against, and
-     its labels sit directly over the rail's fade zone. Drop them back toward
-     the sky while a station is in view; --focus is the same scroll-linked
-     signal that blurs the scene, so this stays continuous. */
-  .tape__stop a {
-    opacity: calc(1 - var(--focus) * 0.66);
-  }
-
-  .hud {
-    padding: 0 14px;
-  }
-
-  .hud__cell {
-    padding: 10px 13px 11px;
-    gap: 7px;
-  }
-
-  .hud__cell--wide,
-  .hud__cell:nth-child(4) {
-    display: none;
+  .alt__box {
+    right: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
   }
 }
 
 @media (max-width: 520px) {
   :root {
     --trace-gap: 16px;
+  }
+
+  .nav {
+    left: 12px;
+    gap: 16px;
+    padding: 8px 10px;
+  }
+
+  .nav__name {
+    display: none;
+  }
+
+  .nav__list {
+    gap: 14px;
+  }
+
+  .nav__item {
+    font-size: 12px;
+  }
+
+  .nav__item--cta {
+    padding: 6px 12px;
   }
 
   .hero__name {
@@ -1423,13 +1426,6 @@ body.has-grabbed .hero__hint {
     letter-spacing: 0.16em;
   }
 
-  .hud__key {
-    font-size: 8px;
-  }
-
-  .hud__val {
-    font-size: 10.5px;
-  }
 }
 
 /* --------------------------------------------------- reduced motion ----
@@ -1454,7 +1450,6 @@ body.has-grabbed .hero__hint {
     transform: none;
   }
 
-  .tape__stop a::after,
   .skip {
     transition: none;
   }

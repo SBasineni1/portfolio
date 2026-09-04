@@ -48,7 +48,6 @@ export class Sections {
 
   private render(): void {
     for (const node of document.querySelectorAll('[data-name]')) node.textContent = site.name;
-    for (const node of document.querySelectorAll('[data-flight]')) node.textContent = site.flight;
     const tagline = document.querySelector('[data-tagline]');
     if (tagline) tagline.textContent = site.tagline;
     for (const station of ['projects', 'experience', 'education'] as const) {

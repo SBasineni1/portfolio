@@ -42,15 +42,6 @@ export function atmosphereAt(altitude: number): AtmosphereSample {
   return out;
 }
 
-/** Named atmospheric layer for the HUD / tape. */
-export function layerName(altitude: number): string {
-  if (altitude < 900) return 'SURFACE';
-  if (altitude < 9000) return 'TROPOSPHERE';
-  if (altitude < 17000) return 'TROPOPAUSE';
-  if (altitude < 28000) return 'STRATOSPHERE';
-  return 'NEAR SPACE';
-}
-
 /* ---------------------------------------------------------------- sky ---- */
 
 interface SkyStop {
