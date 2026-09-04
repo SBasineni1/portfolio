@@ -31,6 +31,12 @@
   inherits: true;
 }
 
+@property --focus {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: true;
+}
+
 @property --in {
   syntax: '<number>';
   initial-value: 0;
@@ -104,6 +110,10 @@ body.sky-dark {
     0 0 15px rgba(2, 6, 12, 0.68);
 }
 
+body.low-power {
+  --focus-blur: 6px;
+}
+
 *,
 *::before,
 *::after {
@@ -131,11 +141,26 @@ body {
   overflow-x: hidden;
 }
 
+canvas#sky {
+  position: fixed;
+  top: -24px;
+  left: -24px;
+  width: calc(100% + 48px);
+  height: calc(100% + 48px);
+  z-index: 0;
+  pointer-events: none;
+  will-change: filter;
+  filter: blur(calc(var(--focus) * var(--focus-blur, 14px)))
+    brightness(calc(1 - var(--focus) * 0.28));
+}
+
 canvas#scene {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
+  background: transparent;
   touch-action: pan-y;
   cursor: default;
 }

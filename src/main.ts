@@ -8,10 +8,17 @@ import { drawBalloon, type DrawOptions } from './world/render';
 import { Hud, type Phase } from './ui/hud';
 import { Sections } from './ui/sections';
 
+const skyElement = document.querySelector<HTMLCanvasElement>('#sky');
+if (!skyElement) throw new Error('Sky canvas not found.');
+const skyCanvas = skyElement;
+const skyCanvasContext = skyCanvas.getContext('2d', { alpha: false });
+if (!skyCanvasContext) throw new Error('2D sky canvas context is unavailable.');
+const skyContext = skyCanvasContext;
+
 const sceneCanvas = document.querySelector<HTMLCanvasElement>('#scene');
 if (!sceneCanvas) throw new Error('Scene canvas not found.');
 const canvas = sceneCanvas;
-const sceneContext = canvas.getContext('2d', { alpha: false });
+const sceneContext = canvas.getContext('2d', { alpha: true });
 if (!sceneContext) throw new Error('2D canvas context is unavailable.');
 const context = sceneContext;
 
@@ -28,6 +35,10 @@ reducedQuery.addEventListener('change', (e) => {
 
 const coarse = window.matchMedia('(pointer: coarse)').matches;
 const lowPower = coarse || window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
+document.body.classList.toggle('low-power', lowPower);
+
+// focus is wired from Sections in a later step
+const focus = 0;
 
 let width = window.innerWidth;
 let height = window.innerHeight;
@@ -85,8 +96,9 @@ const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0 };
 const INK_FROM = 4800;
 const INK_TO = 7200;
 let inkDark = -1;
+let lastFocus = -1;
 
-function syncInk(altitude: number): void {
+function syncSignals(altitude: number, nextFocus: number): void {
   const span = (altitude - INK_FROM) / (INK_TO - INK_FROM);
   const t = Math.min(1, Math.max(0, span));
   // Smootherstep, not smoothstep: it lingers at each end and crosses the
@@ -94,16 +106,20 @@ function syncInk(altitude: number): void {
   // which is the one genuinely weak moment in the ascent — so the less
   // scroll spent there, the better.
   const eased = t * t * t * (t * (t * 6 - 15) + 10);
-  // Style writes force a recalc, so only publish a visible change.
-  if (Math.abs(eased - inkDark) < 0.004) return;
-  inkDark = eased;
-  document.documentElement.style.setProperty('--dark', eased.toFixed(3));
-  // The panels can afford to blend through the crossover because none of them
-  // fly in this band. The fixed chrome does, and a scroll-linked blend would
-  // park it at mid grey on a mid blue sky for as long as the reader sits
-  // there. So the chrome steps instead, and crosses the weak zone on a timer
-  // it controls rather than one the scrollbar controls.
-  document.body.classList.toggle('sky-dark', eased > 0.5);
+  // Style writes force a recalc, so only publish visible changes.
+  if (Math.abs(eased - inkDark) >= 0.004) {
+    inkDark = eased;
+    document.documentElement.style.setProperty('--dark', eased.toFixed(3));
+    // The panels can afford to blend through the crossover because none of them
+    // fly in this band. The fixed chrome does, and a scroll-linked blend would
+    // park it at mid grey on a mid blue sky for as long as the reader sits
+    // there. So the chrome steps instead, and crosses the weak zone on a timer
+    // it controls rather than one the scrollbar controls.
+    document.body.classList.toggle('sky-dark', eased > 0.5);
+  }
+  if (Math.abs(nextFocus - lastFocus) < 0.004) return;
+  lastFocus = nextFocus;
+  document.documentElement.style.setProperty('--focus', nextFocus.toFixed(3));
 }
 
 function resize(): void {
@@ -113,6 +129,13 @@ function resize(): void {
   height = window.innerHeight;
 
   const dpr = Math.min(window.devicePixelRatio || 1, lowPower ? 2 : 2.5);
+  const skyDpr = Math.min(dpr, lowPower ? 1 : 1.5);
+  skyCanvas.width = Math.round((width + 48) * skyDpr);
+  skyCanvas.height = Math.round((height + 48) * skyDpr);
+  skyCanvas.style.width = `${width + 48}px`;
+  skyCanvas.style.height = `${height + 48}px`;
+  skyContext.setTransform(skyDpr, 0, 0, skyDpr, 24 * skyDpr, 24 * skyDpr);
+
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
   canvas.style.width = `${width}px`;
@@ -168,6 +191,8 @@ function update(dt: number): void {
   updatePhase();
 }
 
+let skyFrame = 0;
+
 function render(alpha: number): void {
   view.width = width;
   view.height = height;
@@ -177,7 +202,10 @@ function render(alpha: number): void {
   view.windStrength = windStrength;
   view.reduced = reduced;
 
-  scenery.draw(context, view);
+  if (focus < 0.99 || skyFrame % 3 === 0) scenery.draw(skyContext, view);
+  skyFrame++;
+
+  context.clearRect(0, 0, width, height);
 
   drawOptions.time = time;
   drawOptions.dark = Math.min(1, Math.max(0, (camera.altitude - 9000) / 15000));
@@ -210,7 +238,7 @@ function frame(timestamp: number): void {
 
   hud.update(currentTime, camera.altitude, camera.ascentRate, phase);
   sections.update(window.scrollY, height);
-  syncInk(camera.altitude);
+  syncSignals(camera.altitude, focus);
 
   requestAnimationFrame(frame);
 }
