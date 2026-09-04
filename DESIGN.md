@@ -27,6 +27,18 @@ document and is kept intact. Layer B reference:
 - Its acid `#c0fc04`. This site's accent is `--flare`, sampled from the balloon already on
   the canvas, and it belongs to the subject matter.
 
+**Card stations (2026-09-04).** Projects, Experience and Education are full-width stations
+whose card layouts follow two user-supplied references: rauno.me (horizontal rail of very large
+cards with a typographic cover and a tick ruler) and adiprathapa.space (tinted photo cards with
+logo / date / role / summary / tags; an education split of cover + text card). Those references
+use rounded cards and per-card accent colours. **Both are adopted as a deliberate, bounded
+exception** to the flat-instrument rules below — see §7. Cards are *content surfaces laid on the
+sky*; the instrument chrome (HUD, tape, trace, ticks, rulers) stays square and flat.
+
+The OpenAI marketing site was also requested as a reference; its capture is pending (the site
+blocks headless capture and needs the Chrome extension). Type ramp and spacing may be retuned
+once it lands, without changing any rule here.
+
 ## 1. Atmosphere & Identity
 
 An instrument left running. The page is a radiosonde flight: you launch at a pale blue pad
@@ -43,6 +55,19 @@ Depth is rejected on purpose. The chrome layer is hairlines, ticks, and type —
 radius, no fill. All atmosphere lives in the canvas behind it: the sky gradient, the balloon,
 the haze. That split is the architecture — **flat precise instrument in the DOM, lit world in
 the canvas** — and it is why the UI never competes with the scene.
+
+The world is two canvases. `#sky` carries the procedural atmosphere (five-stop gradient, horizon
+haze band, brush-stamped cumulus, cirrus, sun, limb, stars) and is blurred and dimmed by
+`--focus` whenever a text station is in view, so prose always sits on a soft ground. `#scene`
+carries the balloon and near clouds and is never blurred. The balloon itself is a **photograph on
+a soft body**: envelope, packed-chute bundle and sonde sprites are drawn over the Verlet ring,
+the envelope clipped to the ring's real silhouette and deformed by a neck-frame affine fit, so a
+grab still pinches it and pressure still bulges it.
+
+Moving between stations is a **wind gust**. Entering a station fires one decaying horizontal
+impulse through the wind path — the balloon leans right, the tether whips, the sonde trails —
+while the canvas streaks spike and the station's cards sweep in from the right on the same
+scroll-linked signal. The balloon then parks at a per-station home above the cards.
 
 ## 2. Color
 
@@ -74,16 +99,23 @@ plus a stacked three-layer `--chrome-halo` glow.
   1. measurement marks — isobar bullets, the mission separator, the band altitude label,
   2. the organisation line in an entry,
   3. the PHASE readout in the HUD,
-  4. the tape sled — the "you are here" marker on the altitude axis,
+  4. **position markers on any axis** — the tape sled on the altitude axis and the current
+     tick of a rail ruler (`.ruler__tick.is-current`),
   5. the global `:focus-visible` ring.
   It is **not** a link colour, **not** a hover colour, and **not** a text underline. Links use
   the bracket frame in §5; emphasis rules use `--hair-strong`. Adding a sixth job flattens
   the scheme — if you need one, remove another first.
+- **Per-card `accent` is content, not palette.** A card may carry an `--accent` (from its data
+  record) used only inside its cover slot: the experience/education tint and the fallback
+  cover. It never colours text, chrome, borders or links. The paper stock and its local ink
+  family (`--card-paper`, `--card-ink`) are fixed and do not follow `--dark`, because `--dark`
+  saturates at 7 km while the sky is still blue and a card is a printed object, not sky.
 - Depth is forbidden in the DOM: no `box-shadow`, no `border-radius`, no CSS gradient on UI,
-  with **one documented exception**: `.tape__sled` carries a 12px `--flare` glow. It is a
-  position marker on an instrument axis — a lamp, not elevation — and it is the only lit
-  element in the chrome layer. Do not use it as precedent for shadowing anything else.
-  `text-shadow` haloes exist for legibility over an unpredictable sky, not for depth.
+  with **two documented exceptions**: `.tape__sled` carries a 12px `--flare` glow (a lamp on an
+  instrument axis, not elevation), and **cards** (§5) carry a 16px radius, a hairline frame and,
+  on tinted covers, a bottom-weighted scrim. Cards are content surfaces; do not use either as
+  precedent for the chrome layer. `text-shadow` haloes exist for legibility over an
+  unpredictable sky, not for depth.
 
 ## 3. Typography
 
@@ -145,6 +177,15 @@ with 9px crosshair ticks in `--grid-tick` at every interior intersection. It sit
 canvas and below `#content`, does not scroll, and is hidden under `prefers-reduced-motion`
 only if it ever animates (it does not).
 
+### Stations
+Projects, Experience and Education are `.station` sections: full width minus the tape column
+(`left: 0; right: var(--tape-w)`), positioned at their band altitude by the same layout as the
+panels, height ≤ 0.82 viewport. A station is head (band annotation, solid-set title, lede ≤ 48ch,
+ruler at the right) over a body: a horizontal `.rail` of cards, or the education split. Below
+900px the tape collapses to labels and the rail dissolves under them with a mask over its last
+104px. The balloon parks per station (`Band.homeX/homeY`, wide screens only): top-right for
+Projects and Experience, top-left for Education, always above the card strip.
+
 ## 5. Components
 
 ### Link (`.entry__links a`, `.links a`) — the signature interaction
@@ -186,19 +227,64 @@ PHASE is the only cell allowed the accent.
 Right-hand axis. Ticks, labels at major stops, a sled marking current altitude. Labels are
 condensed data face with `--chrome-halo`.
 
+### Rail
+`overflow-x: auto`, `scroll-snap-type: x mandatory`, gap 20px, trailing 40vw padding so the
+last card can snap to start. **Never intercepts the vertical wheel** — the page scroll is the
+ascent. Horizontal trackpad and shift+wheel scroll it natively; mouse drag (with snap released
+while dragging and the trailing click suppressed after >6px); ArrowLeft/Right when focus is
+inside. `cursor: grab`.
+
+### Card
+The one rounded surface: 16px radius, 1px `--hair` frame, `--card-paper` stock with its own ink
+family. One `--card-pad` (24px, 18px on narrow) drives every inset. Sizes: project 60vw × 55vh,
+experience 40vw × 55vh (76vw / 72vw × 46vh below 900px). Each card sets `--i` for the sweep
+stagger and may set `--accent`.
+- **Project card**: label row in the data face (index · title · year) above a cover, then body
+  (description, tags, bracket links). The default cover is typographic — the title in the
+  display face at up to 176px, weight 800, tracking −0.03em, set at the bottom-left and clipped by
+  the card so it bleeds off the right edge.
+- **Experience card**: the cover *is* the surface — a photo under an `--accent` tint with a
+  bottom-weighted scrim, or the tint alone. Logo slot top-left (image, or the org name in the
+  data face). Content bottom-left: date eyebrow, role at 22/650/−0.02em, summary 14/1.55, tags.
+  Text is always light on the tint.
+- **Education split**: cover (4:3, tinted, wordmark fallback inset 24px) beside a text card
+  (school + location head row bounded by hairlines, degree, description, courses as tags,
+  dates footer); later entries as hairline rows below.
+
+### Cover slot
+Every card has `cover?` (and experience/education `logo?`) in its data record. Files go in
+`public/covers/` and are referenced with `asset('covers/x.jpg')`. Until a file exists the
+designed fallback renders; adding one changes nothing else.
+
+### Ruler
+One 1×14px `--hair-strong` tick per card, the current one 2×20px in `--flare`, plus a
+`01 / 03` count in the data face. Driven by rail scroll position, not by IntersectionObserver.
+
 ## 6. Motion
 
 - Easing: `cubic-bezier(0, 0, 0.2, 1)` (ease-out) for interaction; `cubic-bezier(0.2, 0.7, 0.2, 1)`
   for existing entrance transitions.
 - Durations: 0.3s interaction, 0.26s chrome step, 0.8s section entrance.
-- `--dark` and `--in` are **continuous scroll-linked signals**, so nothing needs a colour
-  transition — the change is already smooth. Do not add one.
+- `--dark`, `--in`, `--sweep` and `--focus` are **continuous scroll-linked signals**, so nothing
+  needs a colour transition — the change is already smooth. Do not add one. `--focus` (max
+  station presence) blurs and dims `#sky`; `--sweep` (an inheriting copy of `--in`) drives the
+  station body's `translateX((1 − sweep) · 60vw)` and the per-card `--i · 8vw` stagger.
+- **The gust** is physics, not CSS: one impulse of `GUST_PEAK` through the balloon's wind path,
+  decaying with a 0.35s time constant, fired when a station's `--in` crosses 0.15 upward and
+  re-armed below 0.05. It overshoots the parking point by ~100px and recovers in about a second.
 - Motion must signal state. No decorative animation on non-interactive elements.
-- Honour `prefers-reduced-motion` for anything that moves on its own.
+- Honour `prefers-reduced-motion`: no gust impulse, no sweep transform (fade only), calm wind.
+  The blur is legibility, not motion, and stays on.
 
 ## 7. Depth
 
-There is none in the DOM, deliberately. No `box-shadow`, no `border-radius`, no CSS gradient
-on any UI element. Separation comes from hairlines, ticks, tracking, and the canvas behind.
+There is none in the chrome layer, deliberately. No `box-shadow`, no `border-radius`, no CSS
+gradient on any instrument element. Separation comes from hairlines, ticks, tracking, and the
+canvas behind — and, behind stations, the `--focus` blur of the sky itself.
 `text-shadow` haloes are legibility tools over an unpredictable sky, not elevation — do not
 repurpose them as glow effects.
+
+**The card exception.** Cards (§5) are content surfaces, not chrome: 16px radius, hairline
+frame, tinted covers with a bottom scrim. That is the whole allowance. No drop shadows, no
+hover lift, no glass. If a card ever needs to feel higher, sharpen the sky blur behind it, do
+not shadow it.
