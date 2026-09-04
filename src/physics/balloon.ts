@@ -60,8 +60,8 @@ export class Balloon {
   riser = 0;
 
   /** Unit-radius geometry, scaled by the current envelope radius. */
-  private readonly shapeX: Float32Array;
-  private readonly shapeY: Float32Array;
+  private readonly profileX: Float32Array;
+  private readonly profileY: Float32Array;
   private readonly unitNeighbor: Float32Array;
   private readonly unitSkip: Float32Array;
   private readonly unitSpoke: Float32Array;
@@ -114,8 +114,8 @@ export class Balloon {
     this.ring = new Int32Array(N);
     this.rope = new Int32Array(ROPE);
     this.chute = new Int32Array(CHUTE);
-    this.shapeX = new Float32Array(N);
-    this.shapeY = new Float32Array(N);
+    this.profileX = new Float32Array(N);
+    this.profileY = new Float32Array(N);
     this.unitNeighbor = new Float32Array(N);
     this.unitSkip = new Float32Array(N);
     this.unitSpoke = new Float32Array(N);
@@ -129,18 +129,18 @@ export class Balloon {
       const a = -Math.PI / 2 + (i / N) * Math.PI * 2;
       const v = Math.sin(a);
       const f = 1 - 0.24 * Math.max(0, v) ** 1.5 + 0.05 * Math.max(0, -v);
-      this.shapeX[i] = Math.cos(a) * f;
-      this.shapeY[i] = v * f;
+      this.profileX[i] = Math.cos(a) * f;
+      this.profileY[i] = v * f;
       this.shredSeed[i] = (i * 0.61803398875) % 1;
     }
     let area = 0;
     for (let i = 0; i < N; i++) {
       const j = (i + 1) % N;
       const k = (i + 2) % N;
-      this.unitNeighbor[i] = Math.hypot(this.shapeX[j] - this.shapeX[i], this.shapeY[j] - this.shapeY[i]);
-      this.unitSkip[i] = Math.hypot(this.shapeX[k] - this.shapeX[i], this.shapeY[k] - this.shapeY[i]);
-      this.unitSpoke[i] = Math.hypot(this.shapeX[i], this.shapeY[i]);
-      area += this.shapeX[i] * this.shapeY[j] - this.shapeX[j] * this.shapeY[i];
+      this.unitNeighbor[i] = Math.hypot(this.profileX[j] - this.profileX[i], this.profileY[j] - this.profileY[i]);
+      this.unitSkip[i] = Math.hypot(this.profileX[k] - this.profileX[i], this.profileY[k] - this.profileY[i]);
+      this.unitSpoke[i] = Math.hypot(this.profileX[i], this.profileY[i]);
+      area += this.profileX[i] * this.profileY[j] - this.profileX[j] * this.profileY[i];
     }
     this.unitArea = Math.abs(area) / 2;
 
@@ -149,7 +149,7 @@ export class Balloon {
     const w = this.world;
 
     for (let i = 0; i < N; i++) {
-      this.ring[i] = w.addPoint(cx + this.shapeX[i] * R_GROUND, cy + this.shapeY[i] * R_GROUND, 1);
+      this.ring[i] = w.addPoint(cx + this.profileX[i] * R_GROUND, cy + this.profileY[i] * R_GROUND, 1);
     }
     this.center = w.addPoint(cx, cy, 0.8);
     this.neck = this.ring[N / 2];
@@ -309,7 +309,7 @@ export class Balloon {
     // pressure alone cannot round out again.
     const r = this.radius * 0.85;
     for (let i = 0; i < this.ringCount; i++) {
-      w.place(this.ring[i], nx + this.shapeX[i] * r, ny - this.radius * 0.9 + this.shapeY[i] * r);
+      w.place(this.ring[i], nx + this.profileX[i] * r, ny - this.radius * 0.9 + this.profileY[i] * r);
     }
     w.place(this.center, nx, ny - this.radius * 0.9);
     w.setRangeLive(this.envFrom, this.envTo, true);
