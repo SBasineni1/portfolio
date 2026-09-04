@@ -1,7 +1,8 @@
-import { about, bands, contact, education, experience, projects, site } from '../content';
+import { about, bands, contact, education, experience, projects, site, type Band } from '../content';
 import { progressForAltitude } from '../world/camera';
 import { educationSplit, experienceCard, projectCard } from './cards';
 import { anchor, el } from './dom';
+import { attachRail } from './rail';
 
 /**
  * Turns content.ts into DOM, parks each section at its altitude band, and
@@ -11,11 +12,13 @@ import { anchor, el } from './dom';
 
 interface Positioned {
   el: HTMLElement;
+  band: Band;
   altitude: number;
   center: number;
   kind: 'panel' | 'station';
   /** Last published reveal amount, 0..1. Starts off-scale to force a write. */
   shown: number;
+  armed: boolean;
 }
 
 const km = (m: number): string => (m / 1000).toFixed(1);
@@ -28,9 +31,15 @@ const REVEAL_RAMP = 0.5;
 export class Sections {
   private readonly items: Positioned[] = [];
   private readonly content: HTMLElement;
+  private readonly relayouts: (() => void)[] = [];
   private pageHeight = 0;
+  homeX = 0.5;
+  homeY = 0.44;
 
-  constructor() {
+  constructor(
+    private readonly reduced: () => boolean,
+    private readonly onStationEnter: (band: Band) => void,
+  ) {
     const content = document.querySelector<HTMLElement>('#content');
     if (!content) throw new Error('#content missing');
     this.content = content;
@@ -57,16 +66,20 @@ export class Sections {
       host.append(el('span', undefined, band.layer));
     }
 
-    const projectHost = document.querySelector('[data-projects]');
+    const projectHost = document.querySelector<HTMLElement>('[data-projects]');
     if (projectHost) {
       for (let i = 0; i < projects.length; i++) projectHost.append(projectCard(projects[i], i));
+      const ruler = document.querySelector<HTMLElement>('[data-ruler="projects"]');
+      this.relayouts.push(attachRail(projectHost, ruler, this.reduced));
     }
 
-    const expHost = document.querySelector('[data-experience]');
+    const expHost = document.querySelector<HTMLElement>('[data-experience]');
     if (expHost) {
       for (let i = 0; i < experience.length; i++) {
         expHost.append(experienceCard(experience[i], i));
       }
+      const ruler = document.querySelector<HTMLElement>('[data-ruler="experience"]');
+      this.relayouts.push(attachRail(expHost, ruler, this.reduced));
     }
 
     const eduHost = document.querySelector('[data-education]');
@@ -90,10 +103,12 @@ export class Sections {
       if (section) {
         this.items.push({
           el: section,
+          band,
           altitude: band.altitude,
           center: 0,
           kind: section.classList.contains('station') ? 'station' : 'panel',
           shown: -1,
+          armed: true,
         });
       }
     }
@@ -117,6 +132,7 @@ export class Sections {
         : center - h / 2;
       item.el.style.top = `${Math.round(Math.max(viewportHeight * 0.06, top))}px`;
     }
+    for (const relayout of this.relayouts) relayout();
   }
 
   /**
@@ -125,17 +141,51 @@ export class Sections {
    * own. The ramp saturates well before a panel parks, so a section at rest
    * is always fully opaque and legible.
    */
-  update(scrollY: number, viewportHeight: number): number {
+  update(
+    scrollY: number,
+    viewportHeight: number,
+    defaultX: number,
+    defaultY: number,
+    useHomes: boolean,
+  ): number {
     let focus = 0;
+    let xTotal = 0;
+    let xWeight = 0;
+    let yTotal = 0;
+    let yWeight = 0;
     for (const item of this.items) {
       const d = Math.abs(scrollY + viewportHeight * 0.5 - item.center) / viewportHeight;
       const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
       const eased = t * t * (3 - 2 * t);
-      if (item.kind === 'station') focus = Math.max(focus, eased);
+      if (item.kind === 'station') {
+        focus = Math.max(focus, eased);
+        if (item.armed && eased >= 0.15) {
+          this.onStationEnter(item.band);
+          item.armed = false;
+        } else if (!item.armed && eased < 0.05) {
+          item.armed = true;
+        }
+      }
+      if (useHomes && item.band.homeX !== undefined) {
+        xTotal += eased * item.band.homeX;
+        xWeight += eased;
+      }
+      if (useHomes && item.band.homeY !== undefined) {
+        yTotal += eased * item.band.homeY;
+        yWeight += eased;
+      }
       if (Math.abs(eased - item.shown) < 0.004) continue;
       item.shown = eased;
-      item.el.style.setProperty('--in', eased.toFixed(3));
+      const value = eased.toFixed(3);
+      item.el.style.setProperty('--in', value);
+      item.el.style.setProperty('--sweep', value);
     }
+    const xBlend = xWeight > 0 ? xTotal / xWeight : defaultX;
+    const yBlend = yWeight > 0 ? yTotal / yWeight : defaultY;
+    const xPresence = Math.min(1, xWeight);
+    const yPresence = Math.min(1, yWeight);
+    this.homeX = xPresence * xBlend + (1 - xPresence) * defaultX;
+    this.homeY = yPresence * yBlend + (1 - yPresence) * defaultY;
     return focus;
   }
 

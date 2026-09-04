@@ -1,5 +1,5 @@
 import './style.css';
-import { Balloon, type BalloonEnv } from './physics/balloon';
+import { Balloon, GUST_PEAK, type BalloonEnv } from './physics/balloon';
 import { windAt } from './physics/wind';
 import { attachInput } from './input';
 import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
@@ -48,7 +48,12 @@ let height = window.innerHeight;
 const camera = new Camera();
 const scenery = new Scenery(lowPower ? 0.55 : 1);
 const balloon = new Balloon(width, height, lowPower);
-const sections = new Sections();
+const sections = new Sections(
+  () => reduced,
+  () => {
+    if (!reduced) balloon.gust(GUST_PEAK, 1);
+  },
+);
 const hud = new Hud(() => reduced);
 
 let driftX = 0;
@@ -171,8 +176,8 @@ function update(dt: number): void {
   const altitude = camera.altitude;
 
   const wind = windAt(altitude, time, reduced);
-  windStrength = wind.strength;
-  driftX -= wind.x * dt * 0.11;
+  windStrength = Math.min(1, wind.strength + balloon.gustLevel);
+  driftX -= (wind.x + balloon.gustAccelSigned) * dt * 0.11;
 
   // Release / re-anchor with hysteresis so a jittery scroll can't chatter.
   if (anchored && camera.targetAltitude > RELEASE_ALTITUDE) anchored = false;
@@ -183,8 +188,8 @@ function update(dt: number): void {
   env.burst = burstAmount(altitude);
   env.windX = wind.x;
   env.windY = wind.y;
-  env.homeX = width * 0.5;
-  env.homeY = height * (narrow ? 0.17 : anchored ? 0.42 : 0.44);
+  env.homeX = width * sections.homeX;
+  env.homeY = height * sections.homeY;
   env.padX = width * 0.5;
   env.padY = groundScreenY(altitude, height) - 10;
   env.groundY = groundScreenY(altitude, height) - 4;
@@ -241,7 +246,8 @@ function frame(timestamp: number): void {
   render(accumulator / SIM_STEP);
 
   hud.update(currentTime, camera.altitude, camera.ascentRate, phase);
-  focus = sections.update(window.scrollY, height);
+  const defaultY = narrow ? 0.17 : anchored ? 0.42 : 0.44;
+  focus = sections.update(window.scrollY, height, 0.5, defaultY, !narrow);
   syncSignals(camera.altitude, focus);
 
   requestAnimationFrame(frame);
