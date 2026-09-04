@@ -142,6 +142,8 @@ function resize(): void {
   canvas.style.height = `${height}px`;
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+  scenery.resize(width, height);
+
   balloon.recenter((width - oldW) * 0.5, (height - oldH) * 0.42);
 
   narrow = width < 900;
