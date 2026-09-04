@@ -9,7 +9,16 @@ export const site = {
   name: 'Suchit Basineni',
   tagline: 'Atmospheric-scale software, launched from the ground up.', // TODO: replace
   flight: 'SB-01', // TODO: replace — mission designator shown in the header
+  ledes: {
+    projects: 'Selected systems, experiments, and tools built to turn ambitious ideas into working software.', // TODO: replace
+    experience: 'A flight log of roles, teams, and the practical outcomes delivered along the way.', // TODO: replace
+    education: 'The academic ground station: formal study, focused coursework, and the ideas that shaped the ascent.', // TODO: replace
+  },
 };
+
+export function asset(path: string): string {
+  return import.meta.env.BASE_URL + path;
+}
 
 export const about = {
   paragraphs: [
@@ -24,6 +33,9 @@ export interface Project {
   tech: string[];
   link?: string;
   repo?: string;
+  cover?: string;
+  accent?: string;
+  year?: string;
 }
 
 export const projects: Project[] = [
@@ -51,6 +63,12 @@ export interface ExperienceEntry {
   org: string;
   dates: string;
   bullets: string[];
+  summary: string;
+  tech?: string[];
+  cover?: string;
+  logo?: string;
+  accent?: string;
+  location?: string;
 }
 
 export const experience: ExperienceEntry[] = [
@@ -58,6 +76,7 @@ export const experience: ExperienceEntry[] = [
     role: 'Role Title', // TODO: replace
     org: 'Organisation', // TODO: replace
     dates: '2024 — Present', // TODO: replace
+    summary: 'Placeholder: building dependable products and turning complex requirements into measurable results.', // TODO: replace
     bullets: [
       'Placeholder: what you shipped and the measurable result.', // TODO: replace
       'Placeholder: a second contribution worth naming.', // TODO: replace
@@ -67,6 +86,7 @@ export const experience: ExperienceEntry[] = [
     role: 'Earlier Role', // TODO: replace
     org: 'Organisation', // TODO: replace
     dates: '2023 — 2024', // TODO: replace
+    summary: 'Placeholder: owned a focused area of the product and improved how the team shipped it.', // TODO: replace
     bullets: ['Placeholder: what you owned and what changed because of it.'], // TODO: replace
   },
 ];
@@ -76,6 +96,12 @@ export interface EducationEntry {
   degree: string;
   dates: string;
   notes?: string;
+  location?: string;
+  description?: string;
+  courses?: string[];
+  cover?: string;
+  logo?: string;
+  accent?: string;
 }
 
 export const education: EducationEntry[] = [
@@ -84,6 +110,7 @@ export const education: EducationEntry[] = [
     degree: 'B.S. in Something', // TODO: replace
     dates: '2022 — 2026', // TODO: replace
     notes: 'Placeholder: coursework, research group, or an award worth listing.', // TODO: replace
+    description: 'Placeholder: coursework, research group, or an award worth listing.', // TODO: replace
   },
 ];
 
@@ -101,12 +128,14 @@ export interface Band {
   from: number;
   to: number;
   layer: string;
+  homeX?: number;
+  homeY?: number;
 }
 
 export const bands: Band[] = [
   { id: 'about', label: 'About', altitude: 260, from: 0, to: 900, layer: 'Surface' },
-  { id: 'projects', label: 'Projects', altitude: 8000, from: 6000, to: 10000, layer: 'Troposphere' },
-  { id: 'experience', label: 'Experience', altitude: 15000, from: 12000, to: 18000, layer: 'Tropopause' },
-  { id: 'education', label: 'Education', altitude: 23000, from: 20000, to: 26000, layer: 'Stratosphere' },
+  { id: 'projects', label: 'Projects', altitude: 8000, from: 6000, to: 10000, layer: 'Troposphere', homeX: 0.82, homeY: 0.16 },
+  { id: 'experience', label: 'Experience', altitude: 15000, from: 12000, to: 18000, layer: 'Tropopause', homeX: 0.82, homeY: 0.18 },
+  { id: 'education', label: 'Education', altitude: 23000, from: 20000, to: 26000, layer: 'Stratosphere', homeX: 0.18, homeY: 0.16 },
   { id: 'contact', label: 'Contact', altitude: 34600, from: 30000, to: 35000, layer: 'Near space' },
 ];

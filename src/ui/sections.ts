@@ -1,5 +1,7 @@
 import { about, bands, contact, education, experience, projects, site } from '../content';
 import { progressForAltitude } from '../world/camera';
+import { educationSplit, experienceCard, projectCard } from './cards';
+import { anchor, el } from './dom';
 
 /**
  * Turns content.ts into DOM, parks each section at its altitude band, and
@@ -11,6 +13,7 @@ interface Positioned {
   el: HTMLElement;
   altitude: number;
   center: number;
+  kind: 'panel' | 'station';
   /** Last published reveal amount, 0..1. Starts off-scale to force a write. */
   shown: number;
 }
@@ -21,17 +24,6 @@ const km = (m: number): string => (m / 1000).toFixed(1);
 const REVEAL_FAR = 0.85;
 /** Length of the fade, in viewports. Full opacity by 0.35 viewports out. */
 const REVEAL_RAMP = 0.5;
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className?: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 export class Sections {
   private readonly items: Positioned[] = [];
@@ -50,6 +42,10 @@ export class Sections {
     for (const node of document.querySelectorAll('[data-flight]')) node.textContent = site.flight;
     const tagline = document.querySelector('[data-tagline]');
     if (tagline) tagline.textContent = site.tagline;
+    for (const station of ['projects', 'experience', 'education'] as const) {
+      const lede = document.querySelector(`[data-lede="${station}"]`);
+      if (lede) lede.textContent = site.ledes[station];
+    }
 
     const aboutHost = document.querySelector('[data-about]');
     if (aboutHost) for (const p of about.paragraphs) aboutHost.append(el('p', undefined, p));
@@ -63,56 +59,18 @@ export class Sections {
 
     const projectHost = document.querySelector('[data-projects]');
     if (projectHost) {
-      for (const p of projects) {
-        const li = el('li', 'entry');
-        const head = el('div', 'entry__head');
-        head.append(el('h3', 'entry__title', p.title));
-        li.append(head);
-        li.append(el('p', 'entry__text', p.description));
-        if (p.tech.length) {
-          const tags = el('ul', 'tags');
-          for (const t of p.tech) tags.append(el('li', undefined, t));
-          li.append(tags);
-        }
-        if (p.link || p.repo) {
-          const links = el('div', 'entry__links');
-          if (p.link) links.append(anchor(p.link, 'Visit'));
-          if (p.repo) links.append(anchor(p.repo, 'Source'));
-          li.append(links);
-        }
-        projectHost.append(li);
-      }
+      for (let i = 0; i < projects.length; i++) projectHost.append(projectCard(projects[i], i));
     }
 
     const expHost = document.querySelector('[data-experience]');
     if (expHost) {
-      for (const e of experience) {
-        const li = el('li', 'entry');
-        const head = el('div', 'entry__head');
-        head.append(el('h3', 'entry__title', e.role));
-        head.append(el('span', 'entry__meta', e.dates));
-        li.append(head);
-        li.append(el('p', 'entry__org', e.org));
-        const ul = el('ul', 'entry__bullets');
-        for (const b of e.bullets) ul.append(el('li', undefined, b));
-        li.append(ul);
-        expHost.append(li);
+      for (let i = 0; i < experience.length; i++) {
+        expHost.append(experienceCard(experience[i], i));
       }
     }
 
     const eduHost = document.querySelector('[data-education]');
-    if (eduHost) {
-      for (const e of education) {
-        const li = el('li', 'entry');
-        const head = el('div', 'entry__head');
-        head.append(el('h3', 'entry__title', e.school));
-        head.append(el('span', 'entry__meta', e.dates));
-        li.append(head);
-        li.append(el('p', 'entry__org', e.degree));
-        if (e.notes) li.append(el('p', 'entry__text', e.notes));
-        eduHost.append(li);
-      }
-    }
+    if (eduHost) eduHost.append(educationSplit(education));
 
     const contactHost = document.querySelector('[data-contact]');
     if (contactHost) {
@@ -129,7 +87,15 @@ export class Sections {
 
     for (const band of bands) {
       const section = document.querySelector<HTMLElement>(`#${band.id}`);
-      if (section) this.items.push({ el: section, altitude: band.altitude, center: 0, shown: -1 });
+      if (section) {
+        this.items.push({
+          el: section,
+          altitude: band.altitude,
+          center: 0,
+          kind: section.classList.contains('station') ? 'station' : 'panel',
+          shown: -1,
+        });
+      }
     }
   }
 
@@ -159,15 +125,18 @@ export class Sections {
    * own. The ramp saturates well before a panel parks, so a section at rest
    * is always fully opaque and legible.
    */
-  update(scrollY: number, viewportHeight: number): void {
+  update(scrollY: number, viewportHeight: number): number {
+    let focus = 0;
     for (const item of this.items) {
       const d = Math.abs(scrollY + viewportHeight * 0.5 - item.center) / viewportHeight;
       const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
       const eased = t * t * (3 - 2 * t);
+      if (item.kind === 'station') focus = Math.max(focus, eased);
       if (Math.abs(eased - item.shown) < 0.004) continue;
       item.shown = eased;
       item.el.style.setProperty('--in', eased.toFixed(3));
     }
+    return focus;
   }
 
   get height(): number {
@@ -175,23 +144,11 @@ export class Sections {
   }
 }
 
-function anchor(href: string, label: string): HTMLAnchorElement {
-  const a = el('a', undefined, label);
-  a.href = href;
-  a.rel = 'noopener';
-  a.target = '_blank';
-  return a;
-}
-
 function link(key: string, href: string, label: string): HTMLLIElement {
   const li = el('li');
   li.append(el('span', 'links__key', key));
-  const a = el('a', undefined, label);
-  a.href = href;
-  if (!href.startsWith('mailto:')) {
-    a.rel = 'noopener';
-    a.target = '_blank';
-  }
+  const a = href.startsWith('mailto:') ? el('a', undefined, label) : anchor(href, label);
+  if (href.startsWith('mailto:')) a.href = href;
   li.append(a);
   return li;
 }
