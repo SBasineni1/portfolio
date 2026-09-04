@@ -5,8 +5,11 @@ import { attachInput } from './input';
 import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
 import { Scenery, groundScreenY, type View } from './world/scenery';
 import { drawBalloon, type DrawOptions } from './world/render';
+import { loadSprites } from './world/sprites';
 import { Hud, type Phase } from './ui/hud';
 import { Sections } from './ui/sections';
+
+loadSprites();
 
 const skyElement = document.querySelector<HTMLCanvasElement>('#sky');
 if (!skyElement) throw new Error('Sky canvas not found.');
