@@ -99,6 +99,14 @@
   --gutter: clamp(20px, 5vw, 84px);
   --panel-w: min(452px, 42vw);
   --trace-gap: 26px;
+  --card-surface: color-mix(
+    in oklab,
+    #f6f8fb,
+    #0f141c calc(var(--dark) * 100%)
+  );
+  --card-radius: 16px;
+  --rail-gap: 24px;
+  --accent: #1c4b7a;
 }
 
 body.sky-dark {
@@ -275,6 +283,7 @@ a {
   position: relative;
   pointer-events: none;
   z-index: 10;
+  overflow-x: clip;
 }
 
 .hero {
@@ -645,6 +654,333 @@ body.has-grabbed .hero__hint {
   color: var(--ink-3);
 }
 
+/* ------------------------------------------------ stations & cards --- */
+
+.station {
+  position: absolute;
+  left: 0;
+  right: var(--tape-w);
+  padding-left: var(--gutter);
+  opacity: var(--in);
+  pointer-events: auto;
+}
+
+.station__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding-right: var(--gutter);
+  margin-bottom: 20px;
+}
+
+.station .panel__title {
+  margin-bottom: 0;
+}
+
+.station__lede {
+  max-width: 52ch;
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.rail {
+  display: flex;
+  gap: var(--rail-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--gutter);
+  padding: 4px var(--gutter) 12px 0;
+  padding-right: 40vw;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  list-style: none;
+  margin: 0;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid var(--hair);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  color: var(--ink);
+}
+
+.card--project {
+  display: flex;
+  flex-direction: column;
+  width: 60vw;
+  height: 55vh;
+}
+
+.card__label {
+  display: flex;
+  justify-content: space-between;
+  flex: none;
+  padding: 12px 16px;
+  font-family: var(--data);
+  font-stretch: 78%;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.card__cover {
+  overflow: hidden;
+}
+
+.card--project > .card__cover {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.card__cover img,
+.edu__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card__cover--type {
+  min-height: 112px;
+}
+
+.card__big {
+  position: absolute;
+  left: 16px;
+  bottom: -0.08em;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(72px, 11vw, 200px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+.card__body {
+  flex: none;
+  padding: 16px;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.card__text {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.card--exp {
+  width: 40vw;
+  min-width: 320px;
+  height: 55vh;
+  color: #f4f7fa;
+}
+
+.card--exp > .card__cover,
+.card--exp > .card__cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card__tint {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--accent) 78%, #08131f);
+  opacity: 0.86;
+}
+
+.card--exp:not(:has(img)) .card__tint {
+  opacity: 1;
+}
+
+.card__logo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  max-height: 28px;
+  font: 500 10px/1 var(--data);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.card__logo img {
+  display: block;
+  width: auto;
+  max-width: min(180px, 55%);
+  height: 28px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.card__content {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+}
+
+.card__eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--data);
+  font-stretch: 78%;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.card--exp .card__title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.card--exp .card__text {
+  max-width: 40ch;
+  margin-top: 10px;
+  color: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.card--exp .tags {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.edu {
+  display: grid;
+  grid-template-columns: 42fr 58fr;
+  gap: var(--rail-gap);
+  padding-right: var(--gutter);
+}
+
+.edu__hero {
+  display: contents;
+}
+
+.edu__cover {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--card-radius);
+  background: color-mix(in oklab, var(--accent) 78%, #08131f);
+}
+
+.edu__mark {
+  position: absolute;
+  right: 0;
+  bottom: -0.08em;
+  color: #f4f7fa;
+  font-size: clamp(48px, 7vw, 120px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  opacity: 0.12;
+}
+
+.edu__card {
+  border: 1px solid var(--hair);
+  border-radius: var(--card-radius);
+  background: var(--card-surface);
+  padding: 28px;
+}
+
+.edu__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.edu__head h3,
+.edu__row h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.edu__location,
+.edu__dates {
+  font-family: var(--data);
+  font-stretch: 76%;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.edu__degree {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.edu__text {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.edu__card > .edu__dates {
+  display: block;
+  margin-top: 20px;
+}
+
+.edu__row {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--hair);
+}
+
+.edu__row h3 {
+  font-size: 15px;
+}
+
+.ruler {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 24px;
+}
+
 /* -------------------------------------------------------------- tape --- */
 
 .tape {
@@ -848,6 +1184,32 @@ body.has-grabbed .hero__hint {
   .panel::before {
     inset: -22px -5% -22px -20px;
     filter: blur(30px);
+  }
+
+  .station {
+    right: 0;
+    padding-left: var(--gutter);
+  }
+
+  .station__head {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-right: calc(var(--gutter) + var(--tape-w));
+  }
+
+  .card--project {
+    width: 76vw;
+    height: 46vh;
+  }
+
+  .card--exp {
+    width: 72vw;
+    height: 46vh;
+  }
+
+  .edu {
+    grid-template-columns: 1fr;
+    padding-right: calc(var(--gutter) + var(--tape-w));
   }
 
   /* Condensed tape: no ruler, just labelled stops and the marker. */

@@ -40,8 +40,7 @@ const coarse = window.matchMedia('(pointer: coarse)').matches;
 const lowPower = coarse || window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
 document.body.classList.toggle('low-power', lowPower);
 
-// focus is wired from Sections in a later step
-const focus = 0;
+let focus = 0;
 
 let width = window.innerWidth;
 let height = window.innerHeight;
@@ -242,7 +241,7 @@ function frame(timestamp: number): void {
   render(accumulator / SIM_STEP);
 
   hud.update(currentTime, camera.altitude, camera.ascentRate, phase);
-  sections.update(window.scrollY, height);
+  focus = sections.update(window.scrollY, height);
   syncSignals(camera.altitude, focus);
 
   requestAnimationFrame(frame);
