@@ -49,6 +49,12 @@
   inherits: true;
 }
 
+@property --launch {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: true;
+}
+
 :root {
   /* Endpoints of the ascent. Everything below is mixed between them by
      --dark, so there is no threshold and no light-switch moment. */
@@ -399,8 +405,8 @@ a {
   pointer-events: auto;
 }
 
-/* The nameplate: expanded grotesque, set like the label stencilled on the
-   side of the payload box it is riding in. */
+/* The nameplate arrives a character at a time, like a clean instrument
+   readout resolving at launch. */
 .hero__name {
   margin: 0;
   font-weight: 800;
@@ -410,14 +416,35 @@ a {
   /* Inter needs the optical correction at display size; the reference face did
      not, which is why its rule was `normal`. Documented deviation in DESIGN.md. */
   letter-spacing: -0.022em;
-  text-transform: uppercase;
   text-wrap: balance;
   color: var(--ink);
 }
 
+.hero__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.hero__char {
+  display: inline-block;
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(0.55em) rotate(2deg);
+  animation: hero-char-arrive 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(0.08s + var(--char-order) * 0.045s);
+}
+
+@keyframes hero-char-arrive {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
 .hero__tagline {
   margin: 20px 0 0;
-  max-width: 30ch;
+  max-width: 48ch;
   font-size: 16px;
   line-height: 1.5;
   color: var(--ink-2);
@@ -426,25 +453,49 @@ a {
 
 .hero__hint {
   margin: 32px 0 0;
-  max-width: 38ch;
-  padding-left: 15px;
-  border-left: 1px solid var(--hair);
-  font-size: 12px;
-  line-height: 1.8;
-  color: var(--ink-3);
-  transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 46ch;
+  padding: 13px 15px;
+  border: 1px solid var(--hair-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--chrome-paper) 42%, transparent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--ink-day) 12%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  opacity: calc(1 - var(--launch));
+  transform: translateY(calc(var(--launch) * -12px)) scale(calc(1 - var(--launch) * 0.025));
+  transform-origin: left center;
+  will-change: opacity, transform;
 }
 
-/* An emphasis underline, not an accent moment -- --flare is rationed to the
-   three jobs in DESIGN.md section 2 and a text rule is not one of them. */
+.hero__hint-icon {
+  display: grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--chrome-paper);
+  font-family: var(--data);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .hero__key {
-  color: var(--ink-2);
-  border-bottom: 1px solid var(--hair-strong);
-  padding-bottom: 1px;
+  color: var(--ink);
+  font-weight: 650;
 }
 
 body.has-grabbed .hero__hint {
-  opacity: 0.35;
+  opacity: calc((1 - var(--launch)) * 0.38);
 }
 
 /* ------------------------------------------------------------ panels ---
@@ -1499,6 +1550,17 @@ body.low-power .rail > .card {
   }
 
   .panel {
+    transform: none;
+  }
+
+  .hero__char {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    animation: none;
+  }
+
+  .hero__hint {
     transform: none;
   }
 

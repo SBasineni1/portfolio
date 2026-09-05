@@ -133,6 +133,7 @@ const INK_FROM = 3600;
 const INK_TO = 4900;
 let inkDark = -1;
 let lastFocus = -1;
+let lastLaunch = -1;
 
 function syncSignals(altitude: number, nextFocus: number): void {
   const span = (altitude - INK_FROM) / (INK_TO - INK_FROM);
@@ -152,6 +153,12 @@ function syncSignals(altitude: number, nextFocus: number): void {
     // there. So the chrome steps instead, and crosses the weak zone on a timer
     // it controls rather than one the scrollbar controls.
     document.body.classList.toggle('sky-dark', eased > 0.5);
+  }
+  const launchSpan = Math.min(1, Math.max(0, (altitude - 35) / 180));
+  const launchEased = launchSpan * launchSpan * (3 - 2 * launchSpan);
+  if (Math.abs(launchEased - lastLaunch) >= 0.004) {
+    lastLaunch = launchEased;
+    document.documentElement.style.setProperty('--launch', launchEased.toFixed(3));
   }
   if (Math.abs(nextFocus - lastFocus) < 0.004) return;
   lastFocus = nextFocus;

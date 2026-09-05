@@ -49,6 +49,8 @@ export class Sections {
 
   private render(): void {
     for (const node of document.querySelectorAll('[data-name]')) node.textContent = site.name;
+    const heroName = document.querySelector<HTMLElement>('[data-hero-name]');
+    if (heroName) renderHeroName(heroName, site.heroName);
     const tagline = document.querySelector('[data-tagline]');
     if (tagline) tagline.textContent = site.tagline;
     for (const station of ['projects', 'experience', 'education'] as const) {
@@ -192,6 +194,27 @@ export class Sections {
 
   get height(): number {
     return this.pageHeight;
+  }
+}
+
+function renderHeroName(host: HTMLElement, label: string): void {
+  host.replaceChildren();
+  host.setAttribute('aria-label', label);
+  let order = 0;
+
+  for (const [wordIndex, word] of label.split(' ').entries()) {
+    if (wordIndex > 0) host.append(document.createTextNode(' '));
+    const wordElement = el('span', 'hero__word');
+    wordElement.setAttribute('aria-hidden', 'true');
+
+    for (const character of word) {
+      const characterElement = el('span', 'hero__char', character);
+      characterElement.style.setProperty('--char-order', String(order));
+      wordElement.append(characterElement);
+      order++;
+    }
+
+    host.append(wordElement);
   }
 }
 

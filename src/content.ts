@@ -7,7 +7,9 @@
 
 export const site = {
   name: 'Suchit Basineni',
-  tagline: 'Atmospheric-scale software, launched from the ground up.', // TODO: replace
+  heroName: "Hi, I'm Suchit",
+  tagline:
+    "I'm a computer science student at Cornell University minoring in atmospheric science, building software where computation meets the atmosphere.",
   ledes: {
     projects: 'Selected systems, experiments, and tools built to turn ambitious ideas into working software.', // TODO: replace
     experience: 'A flight log of roles, teams, and the practical outcomes delivered along the way.', // TODO: replace
