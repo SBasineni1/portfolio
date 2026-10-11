@@ -9,7 +9,7 @@ export const site = {
   name: 'Suchit Basineni',
   heroName: "Hi, I'm Suchit",
   tagline:
-    "I'm a computer science student at Cornell University minoring in atmospheric science, building software where computation meets the atmosphere.",
+    "I'm a computer science student at Cornell University minoring in atmospheric science, building full stack systems for climate and weather data.",
   ledes: {
     projects: 'Selected systems, experiments, and tools built to turn ambitious ideas into working software.', // TODO: replace
     experience: 'A flight log of roles, teams, and the practical outcomes delivered along the way.', // TODO: replace
@@ -21,10 +21,29 @@ export function asset(path: string): string {
   return import.meta.env.BASE_URL + path;
 }
 
+export const profile = {
+  headshot: asset('profile/headshot.jpg'),
+  // Temporary reverse image: replace this path when the GitHub logo is ready.
+  reverseImage: asset('profile/github-avatar.png'),
+  reverseAlt: 'Suchit Basineni’s GitHub avatar',
+};
+
+/**
+ * About: one lede sentence set large, then body paragraphs, then a short
+ * "at a glance" list. Keep the lede to one or two sentences; facts read best
+ * as 3–5 short rows (leave `facts` empty to hide the list).
+ */
 export const about = {
+  lede: 'Placeholder: one or two sentences on who you are and what you work on.', // TODO: replace
   paragraphs: [
-    'Placeholder: one paragraph on who you are and the kind of problems you like to work on.', // TODO: replace
-    'Placeholder: a second paragraph on how you work — tools, disciplines, what you are chasing next.', // TODO: replace
+    'Placeholder: a paragraph on the problems you like to work on and why.', // TODO: replace
+    'Placeholder: a paragraph on how you work — tools, disciplines, what you are chasing next.', // TODO: replace
+  ],
+  facts: [
+    { label: 'Studying', value: 'Computer Science, Cornell University' },
+    { label: 'Minor', value: 'Atmospheric Science' },
+    { label: 'Currently', value: 'Placeholder: what you are working on now' }, // TODO: replace
+    { label: 'Based in', value: 'Placeholder: city' }, // TODO: replace
   ],
 };
 
@@ -117,8 +136,8 @@ export const education: EducationEntry[] = [
 
 export const contact = {
   email: 'basineni.suchit@gmail.com',
-  github: 'suchitbasineni',
-  linkedin: '', // TODO: replace with a LinkedIn handle, or leave empty to hide
+  github: 'SBasineni1',
+  linkedin: 'suchit-basineni',
 };
 
 /** Altitude band for each section, in metres. Drives layout and the tape. */

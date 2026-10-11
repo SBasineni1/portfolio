@@ -21,9 +21,16 @@ interface Positioned {
   exit: boolean;
   gate: number;
   shownSweep: number;
+  /** Whether the head (titles, copy) and body (cards) have arrived, for the reveals. */
+  arrived: boolean;
+  bodyArrived: boolean;
 }
 
-const km = (m: number): string => (m / 1000).toFixed(1);
+/** A section has arrived (`shown`) or fully left; `body` is a station's cards. */
+export type RevealListener = (section: HTMLElement, part: 'head' | 'body', shown: boolean) => void;
+
+/** 0 → "0", 900 → "0.9", 10000 → "10": kilometres without trailing zeros. */
+const km = (m: number): string => String(Math.round(m / 100) / 10);
 
 /** Distance, in viewports, at which a section has faded out entirely. */
 const REVEAL_FAR = 0.85;
@@ -40,6 +47,7 @@ export class Sections {
   constructor(
     private readonly reduced: () => boolean,
     private readonly onStationEnter: (band: Band) => void,
+    private readonly onReveal: RevealListener = () => undefined,
   ) {
     const content = document.querySelector<HTMLElement>('#content');
     if (!content) throw new Error('#content missing');
@@ -49,24 +57,34 @@ export class Sections {
 
   private render(): void {
     for (const node of document.querySelectorAll('[data-name]')) node.textContent = site.name;
-    const heroName = document.querySelector<HTMLElement>('[data-hero-name]');
-    if (heroName) renderHeroName(heroName, site.heroName);
-    const tagline = document.querySelector('[data-tagline]');
-    if (tagline) tagline.textContent = site.tagline;
     for (const station of ['projects', 'experience', 'education'] as const) {
       const lede = document.querySelector(`[data-lede="${station}"]`);
       if (lede) lede.textContent = site.ledes[station];
     }
 
     const aboutHost = document.querySelector('[data-about]');
-    if (aboutHost) for (const p of about.paragraphs) aboutHost.append(el('p', undefined, p));
-
-    for (const band of bands) {
-      const host = document.querySelector(`[data-band="${band.id}"]`);
-      if (!host) continue;
-      host.append(el('span', undefined, `${km(band.from)}–${km(band.to)} km`));
-      host.append(el('span', undefined, band.layer));
+    if (aboutHost) {
+      aboutHost.append(el('p', 'panel__lede', about.lede));
+      for (const p of about.paragraphs) aboutHost.append(el('p', undefined, p));
+      if (about.facts.length > 0) {
+        const facts = el('dl', 'facts');
+        for (const fact of about.facts) {
+          const row = el('div', 'facts__row');
+          row.append(el('dt', undefined, fact.label), el('dd', undefined, fact.value));
+          facts.append(row);
+        }
+        aboutHost.append(facts);
+      }
     }
+
+    // Kicker: section number, the layer of sky it sits in, and its altitude range.
+    bands.forEach((band, index) => {
+      const host = document.querySelector(`[data-band="${band.id}"]`);
+      if (!host) return;
+      host.append(el('span', 'panel__index', String(index + 1).padStart(2, '0')));
+      host.append(el('span', 'panel__layer', band.layer));
+      host.append(el('span', 'panel__range', `${km(band.from)}–${km(band.to)} km`));
+    });
 
     const projectHost = document.querySelector<HTMLElement>('[data-projects]');
     if (projectHost) {
@@ -95,7 +113,7 @@ export class Sections {
       );
       if (contact.linkedin) {
         contactHost.append(
-          link('LinkedIn', `https://www.linkedin.com/in/${contact.linkedin}`, contact.linkedin),
+          link('LinkedIn', `https://www.linkedin.com/in/${contact.linkedin}/`, `linkedin.com/in/${contact.linkedin}`),
         );
       }
     }
@@ -113,6 +131,8 @@ export class Sections {
           exit: false,
           gate: 0,
           shownSweep: -1,
+          arrived: false,
+          bodyArrived: false,
         });
       }
     }
@@ -175,6 +195,24 @@ export class Sections {
         sweep = Math.min(eased, g * g * (3 - 2 * g));
         if (item.exit) exit = 1;
       }
+      // Arrival has hysteresis: a section plays its reveal once it is mostly
+      // in, and resets only after it has faded out completely.
+      if (!item.arrived && eased >= 0.5) {
+        item.arrived = true;
+        this.onReveal(item.el, 'head', true);
+      } else if (item.arrived && eased < 0.05) {
+        item.arrived = false;
+        this.onReveal(item.el, 'head', false);
+      }
+      if (item.kind === 'station') {
+        if (!item.bodyArrived && sweep >= 0.35) {
+          item.bodyArrived = true;
+          this.onReveal(item.el, 'body', true);
+        } else if (item.bodyArrived && sweep < 0.02) {
+          item.bodyArrived = false;
+          this.onReveal(item.el, 'body', false);
+        }
+      }
       if (Math.abs(eased - item.shown) >= 0.004) {
         item.shown = eased;
         item.el.style.setProperty('--in', eased.toFixed(3));
@@ -188,6 +226,11 @@ export class Sections {
     return focus;
   }
 
+  /** Every section element, in document order. */
+  get elements(): HTMLElement[] {
+    return this.items.map((item) => item.el);
+  }
+
   get exit(): number {
     return this.exitState;
   }
@@ -197,32 +240,14 @@ export class Sections {
   }
 }
 
-function renderHeroName(host: HTMLElement, label: string): void {
-  host.replaceChildren();
-  host.setAttribute('aria-label', label);
-  let order = 0;
-
-  for (const [wordIndex, word] of label.split(' ').entries()) {
-    if (wordIndex > 0) host.append(document.createTextNode(' '));
-    const wordElement = el('span', 'hero__word');
-    wordElement.setAttribute('aria-hidden', 'true');
-
-    for (const character of word) {
-      const characterElement = el('span', 'hero__char', character);
-      characterElement.style.setProperty('--char-order', String(order));
-      wordElement.append(characterElement);
-      order++;
-    }
-
-    host.append(wordElement);
-  }
-}
-
+/** A contact row: label, value, and an arrow that moves on hover. The whole row is the link. */
 function link(key: string, href: string, label: string): HTMLLIElement {
   const li = el('li');
-  li.append(el('span', 'links__key', key));
-  const a = href.startsWith('mailto:') ? el('a', undefined, label) : anchor(href, label);
-  if (href.startsWith('mailto:')) a.href = href;
+  const a = href.startsWith('mailto:') ? el('a') : anchor(href, '');
+  a.href = href;
+  a.className = 'links__row';
+  a.append(el('span', 'links__key', key), el('span', 'links__value', label), el('span', 'links__arrow', '↗'));
+  a.lastElementChild?.setAttribute('aria-hidden', 'true');
   li.append(a);
   return li;
 }

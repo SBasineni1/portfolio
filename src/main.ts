@@ -5,13 +5,29 @@ import { windAt } from './physics/wind';
 import { attachInput } from './input';
 import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
 import { Scenery, groundScreenY, type View } from './world/scenery';
+import { PadGear } from './world/pad';
 import { drawBalloon, type DrawOptions } from './world/render';
-import { loadSprites } from './world/sprites';
+import { sceneLight } from './world/paint';
+import { pickSite, rememberSite } from './world/sites';
 import { Nav } from './ui/nav';
 import { Sections } from './ui/sections';
 import { AltTape } from './ui/tape';
+import { mountToast } from './ui/toast';
+import { startHeroTypewriter } from './ui/typewriter';
+import { mountProfile } from './ui/profile';
+import { mountSitePicker } from './ui/site-picker';
+import { Reveals } from './ui/reveals';
 
-loadSprites();
+// A reload is a new launch: start on the pad, not wherever the last flight
+// was. The browser would otherwise restore the old scroll position (or jump to
+// a #section the nav wrote) a moment after load, which flies the balloon up
+// and releases it, which dismisses the launch note. A fresh visit to a
+// shared #section link still deep-links.
+history.scrollRestoration = 'manual';
+const arrival = performance.getEntriesByType('navigation')[0];
+if (arrival instanceof PerformanceNavigationTiming && arrival.type === 'reload' && location.hash) {
+  history.replaceState(history.state, '', location.pathname + location.search);
+}
 
 const skyElement = document.querySelector<HTMLCanvasElement>('#sky');
 if (!skyElement) throw new Error('Sky canvas not found.');
@@ -73,17 +89,35 @@ let width = window.innerWidth;
 let height = window.innerHeight;
 
 const camera = new Camera();
-const scenery = new Scenery(lowPower ? 0.55 : 1);
+const site = pickSite();
+rememberSite(site);
 const balloon = new Balloon(width, height, lowPower);
+// A click on the windsock blows a gust the balloon feels too.
+const pad = new PadGear((strength) => {
+  if (!reduced) balloon.gust(GUST_PEAK * strength, 1);
+});
+const scenery = new Scenery(lowPower ? 0.55 : 1, site, pad);
 const track = new ExitTrack();
+const reveals = new Reveals(() => reduced);
 const sections = new Sections(
   () => reduced,
   () => {
     if (!reduced && !tracked) balloon.gust(GUST_PEAK, 1);
   },
+  (section, part, shown) => reveals.set(section, part, shown),
 );
+for (const section of sections.elements) reveals.prepare(section);
 const nav = new Nav(() => reduced);
 const tape = new AltTape();
+const launchNote = mountToast(() => reduced);
+startHeroTypewriter(() => reduced);
+const polaroid = mountProfile();
+const picker = mountSitePicker(
+  site,
+  (next) => scenery.setSite(next),
+  (next) => scenery.preloadSite(next),
+  () => reduced,
+);
 
 let driftX = 0;
 let time = 0;
@@ -117,7 +151,13 @@ const view: View = {
   reduced,
 };
 
-const drawOptions: DrawOptions = { time: 0, dark: 0, reduced, alpha: 0, fade: 1 };
+const drawOptions: DrawOptions = {
+  time: 0,
+  reduced,
+  alpha: 0,
+  fade: 1,
+  light: sceneLight(),
+};
 
 /**
  * How far the page ink has crossed from daylight to instrument white, 0..1.
@@ -159,6 +199,7 @@ function syncSignals(altitude: number, nextFocus: number): void {
   if (Math.abs(launchEased - lastLaunch) >= 0.004) {
     lastLaunch = launchEased;
     document.documentElement.style.setProperty('--launch', launchEased.toFixed(3));
+    picker.setLaunch(launchEased);
   }
   if (Math.abs(nextFocus - lastFocus) < 0.004) return;
   lastFocus = nextFocus;
@@ -257,6 +298,7 @@ function render(alpha: number): void {
   view.windStrength = windStrength;
   view.reduced = reduced;
 
+  scenery.setBalloon(balloon.centroidX, balloon.centroidY, balloon.severed ? 0 : balloon.envelopeR);
   const sceneryFrame = skyFrame % 3 === 0;
   if (focus < 0.99 || sceneryFrame) scenery.draw(skyContext, view);
   if (focus > 0.005 && sceneryFrame) {
@@ -284,7 +326,7 @@ function render(alpha: number): void {
   context.clearRect(0, 0, width, height);
 
   drawOptions.time = time;
-  drawOptions.dark = Math.min(1, Math.max(0, (camera.altitude - 9000) / 15000));
+  scenery.sceneLight(view, balloon.centroidX, balloon.centroidY, drawOptions.light);
   drawOptions.reduced = reduced;
   drawOptions.alpha = alpha;
   drawOptions.fade = reduced ? 1 - hidden : 1;
@@ -319,13 +361,17 @@ function frame(timestamp: number): void {
   focus = sections.update(window.scrollY, height, delta, balloonClear);
   hidden += (sections.exit - hidden) * (1 - Math.exp(-delta * 5));
   syncSignals(camera.altitude, focus);
+  launchNote.track(balloon.centroidX, balloon.centroidY, balloon.envelopeR, !anchored);
+  picker.follow(scenery.site);
+  polaroid.setCloud(scenery.site.cloud);
+  picker.setLoading(!scenery.settled);
 
   requestAnimationFrame(frame);
 }
 
 window.addEventListener('scroll', () => camera.readFromScroll(), { passive: true });
 window.addEventListener('resize', resize);
-attachInput(canvas, balloon);
+attachInput(canvas, balloon, pad);
 canvas.addEventListener('pointerdown', () => document.body.classList.add('has-grabbed'), {
   once: true,
 });

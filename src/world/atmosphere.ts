@@ -88,14 +88,36 @@ const DUSK: Record<SkyBand, [number, number, number]> = {
   low: [242, 186, 138],
 };
 
+/** The launch site's own sky near the ground, weighted 1 at the pad. */
+export interface GroundSky {
+  ground: Record<SkyBand, [number, number, number]>;
+  weight(altitude: number): number;
+}
+
+/** One band of the sky gradient at a given altitude, written into `into` (0..255 floats). */
+export function skyRgb(
+  altitude: number,
+  band: SkyBand,
+  warm: number,
+  site: GroundSky | undefined,
+  into: [number, number, number],
+): [number, number, number] {
+  skyColor(altitude, band, 1, warm, site);
+  into[0] = scratch[0];
+  into[1] = scratch[1];
+  into[2] = scratch[2];
+  return into;
+}
+
 /** rgb() string for one band of the sky gradient at a given altitude. */
-export function skyColor(altitude: number, band: SkyBand, alpha = 1, warm = 0): string {
+export function skyColor(altitude: number, band: SkyBand, alpha = 1, warm = 0, site?: GroundSky): string {
   let i = 0;
   while (i < SKY.length - 2 && altitude > SKY[i + 1].alt) i++;
   const a = SKY[i];
   const b = SKY[i + 1];
   const t = Math.min(1, Math.max(0, (altitude - a.alt) / (b.alt - a.alt)));
   lerp3(a[band], b[band], t, scratch);
+  if (site) lerp3(scratch, site.ground[band], site.weight(altitude), scratch);
   if (band !== 'top' && band !== 'upper') lerp3(scratch, DUSK[band], warm, scratch);
   const r = Math.round(scratch[0]);
   const g = Math.round(scratch[1]);

@@ -1,9 +1,21 @@
-import { skyColor, starVisibility } from './atmosphere';
+import { skyColor, skyRgb, starVisibility } from './atmosphere';
+import { blend, rgb, sceneLight, type Rgb, type SceneLight } from './paint';
 import { fbm1, noise1 } from '../physics/wind';
+import { makeBrush, rand } from './brush';
+import { OvercastDeck } from './deck';
+import { EarthImage } from './earth';
+import { Starfield } from './stars';
+import type { PadGear } from './pad';
+import { SiteTerrain, type PlateFrame } from './terrain';
+import { SiteEffects } from './sites/fx';
+import { LiveSky } from './sites/sky';
+import type { LaunchSite } from './sites/types';
 
 /**
- * Procedural parallax world: sky gradient, launch field, cumulus deck,
- * jet-stream streaks, the earth's limb, and stars. No image assets.
+ * Procedural parallax world: sky gradient, launch site, cumulus deck,
+ * jet-stream streaks, the earth's limb, and stars. The launch site is a set
+ * of illustrated depth plates with live effects (see sites/); the procedural
+ * ground remains as a loading fallback.
  *
  * Each layer converts altitude to screen offset with its own px-per-metre
  * factor, which is the whole parallax trick.
@@ -12,12 +24,10 @@ import { fbm1, noise1 } from '../physics/wind';
 const GROUND_K = 3.2;
 const LOW_CLOUD_K = 0.42;
 const MID_CLOUD_K = 0.2;
-const STAR_K = 0.0022;
 
 const CLOUD_SPAN = 3600;
 const CLOUD_COUNT = 46;
 const PUFFS = 6;
-const STAR_COUNT = 320;
 const BLEED = 24;
 const HAZE_K = 0.02;
 const GROUND_PAD = 120;
@@ -25,22 +35,6 @@ const RIDGE_HEIGHT = 200;
 const GROUND_HEIGHT = 440;
 const RIDGE_BASELINE = 190;
 const GROUND_BASELINE = 90;
-
-function makeBrush(size: number, innerStop: number, color: string, edge: string): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D cloud brush context is unavailable.');
-  const half = size * 0.5;
-  const gradient = ctx.createRadialGradient(half, half, 0, half, half, half);
-  gradient.addColorStop(0, color);
-  gradient.addColorStop(innerStop, color);
-  gradient.addColorStop(1, edge);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-  return canvas;
-}
 
 function makeBushBrush(): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
@@ -67,15 +61,7 @@ function makeBushBrush(): HTMLCanvasElement {
 }
 
 export function groundScreenY(altitude: number, height: number): number {
-  return height - 132 + altitude * GROUND_K;
-}
-
-function rand(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
+  return height - 96 + altitude * GROUND_K;
 }
 
 export interface View {
@@ -89,6 +75,29 @@ export interface View {
 }
 
 export class Scenery {
+  private readonly terrain: SiteTerrain;
+  private readonly sky: LiveSky;
+  private readonly deck: OvercastDeck;
+  private readonly effects: SiteEffects;
+  private readonly starfield: Starfield;
+  private readonly earth: EarthImage;
+  private lastSkyTime = -1;
+  private readonly skyScratch: [number, number, number] = [0, 0, 0];
+  /** The site photograph's measured ground and shadow colours, eased through switches. */
+  private readonly ground: Rgb = [150, 142, 128];
+  private readonly groundShadow: Rgb = [44, 42, 40];
+  /** Where the balloon is this frame, so its shadow can fall on the pad. */
+  private readonly balloon = { x: 0, y: 0, r: 0 };
+  private readonly padLight = sceneLight();
+  /** The site the sky is easing toward; it follows the terrain once plates are up. */
+  private skySite: LaunchSite;
+  private readonly onPlate = (site: LaunchSite, index: number, frame: PlateFrame): void => {
+    for (const fx of site.fx) {
+      if (fx.layer === index) this.effects.draw(this.plateContext, fx, frame, this.plateView);
+    }
+  };
+  private plateContext!: CanvasRenderingContext2D;
+  private plateView!: View;
   private readonly brushSoft = makeBrush(64, 0.18, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
   private readonly brushNear = makeBrush(128, 0.42, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
   private readonly brushShade = makeBrush(64, 0.2, 'rgba(196,206,222,1)', 'rgba(196,206,222,0)');
@@ -110,10 +119,6 @@ export class Scenery {
   private readonly puffY = new Float32Array(CLOUD_COUNT * PUFFS);
   private readonly puffR = new Float32Array(CLOUD_COUNT * PUFFS);
 
-  private readonly starX = new Float32Array(STAR_COUNT);
-  private readonly starY = new Float32Array(STAR_COUNT);
-  private readonly starR = new Float32Array(STAR_COUNT);
-  private readonly starPhase = new Float32Array(STAR_COUNT);
 
   private readonly duneX = new Float32Array(6);
   private readonly duneW = new Float32Array(6);
@@ -122,8 +127,19 @@ export class Scenery {
   private readonly bushY = new Float32Array(40);
   private readonly bushS = new Float32Array(40);
 
-  constructor(density = 1) {
+  constructor(
+    density: number,
+    site: LaunchSite,
+    readonly pad: PadGear,
+  ) {
     this.layerDivisor = density < 1 ? 5 : 3;
+    this.terrain = new SiteTerrain(site);
+    this.sky = new LiveSky(site.sky, site.deck);
+    this.skySite = site;
+    this.deck = new OvercastDeck(this.layerDivisor);
+    this.effects = new SiteEffects(density);
+    this.starfield = new Starfield(density);
+    this.earth = new EarthImage(density < 1);
     const r = rand(20260829);
     const clouds = Math.max(18, Math.round(CLOUD_COUNT * density));
     for (let i = 0; i < CLOUD_COUNT; i++) {
@@ -139,12 +155,6 @@ export class Scenery {
         this.puffY[k] = -Math.sin(t * Math.PI) * 26 + (r() - 0.5) * 14;
         this.puffR[k] = 26 + Math.sin(t * Math.PI) * 30 + r() * 14;
       }
-    }
-    for (let i = 0; i < STAR_COUNT; i++) {
-      this.starX[i] = r();
-      this.starY[i] = r() * 2.6 - 0.8;
-      this.starR[i] = 0.3 + r() * r() * 1.5;
-      this.starPhase[i] = r() * 6.283;
     }
     for (let i = 0; i < this.duneX.length; i++) {
       this.duneX[i] = r();
@@ -188,12 +198,68 @@ export class Scenery {
     groundLayer.height = GROUND_HEIGHT;
     this.groundLayer = groundLayer;
 
+    this.deck.resize();
+    this.starfield.resize(width, height);
     this.renderGround();
     this.renderCirrus(width, height);
     this.lastCloudAltitude = Number.POSITIVE_INFINITY;
   }
 
+  get site(): LaunchSite {
+    return this.terrain.site;
+  }
+
+  /**
+   * Switch launch sites: the gear packs away, the plates crossfade, the sky
+   * and any deck ease over, and the gear sets back up once the new site shows.
+   */
+  setSite(site: LaunchSite): void {
+    if (site !== this.terrain.site) this.pad.leave();
+    this.terrain.show(site);
+  }
+
+  /** The balloon envelope's centre and radius this frame (for its cast shadow). */
+  setBalloon(x: number, y: number, r: number): void {
+    this.balloon.x = x;
+    this.balloon.y = y;
+    this.balloon.r = r;
+  }
+
+  /**
+   * Retarget the sky only once the terrain's site has plates fading in, so
+   * the two always change together (and a failed load leaves both as they were).
+   */
+  private settleSky(): void {
+    const site = this.terrain.site;
+    if (site === this.skySite || !this.terrain.settled) return;
+    this.skySite = site;
+    this.sky.retarget(site.sky, site.deck);
+  }
+
+  /** False while the chosen site's plates are still loading. */
+  get settled(): boolean {
+    return this.terrain.settled;
+  }
+
+  preloadSite(site: LaunchSite): void {
+    this.terrain.preload(site);
+  }
+
   draw(ctx: CanvasRenderingContext2D, v: View): void {
+    const dt = this.lastSkyTime < 0 ? 0 : Math.max(0, v.time - this.lastSkyTime);
+    this.settleSky();
+    if (this.terrain.settled && this.terrain.site === this.skySite) this.pad.arrive();
+    if (dt > 0 || this.lastSkyTime < 0) {
+      this.sky.step(Math.min(0.1, dt), v.reduced);
+      const tone = this.terrain.tone;
+      const k = v.reduced ? 1 : 1 - Math.exp(-Math.min(0.1, dt) * 5);
+      for (let c = 0; c < 3; c++) {
+        this.ground[c] += (tone.ground[c] - this.ground[c]) * k;
+        this.groundShadow[c] += (tone.shadow[c] - this.groundShadow[c]) * k;
+      }
+    }
+    this.lastSkyTime = v.time;
+    this.effects.tick(v);
     this.drawSky(ctx, v);
     this.drawHaze(ctx, v);
     this.drawStars(ctx, v);
@@ -201,33 +267,35 @@ export class Scenery {
     this.drawLimb(ctx, v);
     this.drawCirrus(ctx, v);
     this.drawCloudLayer(ctx, v);
+    this.deck.draw(ctx, v, this.sky, v.height * 0.72 + v.altitude * HAZE_K);
     this.drawGround(ctx, v);
   }
 
   /** Foreground haze + low cloud drawn after the balloon. */
   drawForeground(ctx: CanvasRenderingContext2D, v: View): void {
     this.drawForegroundClouds(ctx, v);
+    this.deck.drawFog(ctx, v, this.sky);
   }
 
   private drawSky(ctx: CanvasRenderingContext2D, v: View): void {
-    const dusk = Math.min(1, Math.max(0, 1 - v.altitude / 2000));
+    const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - v.altitude / 2000));
     const horizonY = v.height * 0.72 + v.altitude * HAZE_K;
     const horizon = horizonY / v.height;
     const upper = Math.min(0.34, horizon * 0.42);
     const mid = Math.min(0.68, horizon * 0.72);
     const haze = Math.min(0.98, Math.max(mid + 0.02, horizon));
     const g = ctx.createLinearGradient(0, 0, 0, v.height);
-    g.addColorStop(0, skyColor(v.altitude, 'top'));
-    g.addColorStop(upper, skyColor(v.altitude, 'upper'));
-    g.addColorStop(mid, skyColor(v.altitude, 'mid', 1, dusk));
-    g.addColorStop(haze, skyColor(v.altitude, 'haze', 1, dusk));
-    g.addColorStop(1, skyColor(v.altitude, 'low', 1, dusk));
+    g.addColorStop(0, skyColor(v.altitude, 'top', 1, 0, this.sky));
+    g.addColorStop(upper, skyColor(v.altitude, 'upper', 1, 0, this.sky));
+    g.addColorStop(mid, skyColor(v.altitude, 'mid', 1, dusk, this.sky));
+    g.addColorStop(haze, skyColor(v.altitude, 'haze', 1, dusk, this.sky));
+    g.addColorStop(1, skyColor(v.altitude, 'low', 1, dusk, this.sky));
     ctx.fillStyle = g;
     ctx.fillRect(-BLEED, -BLEED, v.width + 2 * BLEED, v.height + 2 * BLEED);
   }
 
   private drawHaze(ctx: CanvasRenderingContext2D, v: View): void {
-    const dusk = Math.min(1, Math.max(0, 1 - v.altitude / 2000));
+    const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - v.altitude / 2000));
     const alpha = 0.28 * Math.max(0, 1 - v.altitude / 10000) + 0.12 * dusk;
     if (alpha <= 0) return;
     const hazeGreen = Math.round(247 + (205 - 247) * dusk);
@@ -243,29 +311,68 @@ export class Scenery {
   }
 
   private drawStars(ctx: CanvasRenderingContext2D, v: View): void {
-    const a = starVisibility(v.altitude);
-    if (a <= 0.01) return;
-    const offset = -v.altitude * STAR_K;
-    const drift = v.driftX * 0.02;
-    ctx.fillStyle = '#ffffff';
-    for (let i = 0; i < STAR_COUNT; i++) {
-      let x = (this.starX[i] * v.width - drift) % v.width;
-      if (x < 0) x += v.width;
-      const y = this.starY[i] * v.height + offset;
-      if (y < -BLEED || y > v.height + BLEED) continue;
-      const tw = v.reduced ? 1 : 0.72 + 0.28 * Math.sin(v.time * 1.7 + this.starPhase[i]);
-      ctx.globalAlpha = a * tw * (0.35 + this.starR[i] * 0.5);
-      ctx.beginPath();
-      ctx.arc(x, y, this.starR[i], 0, 6.283);
-      ctx.fill();
+    this.starfield.draw(ctx, v, starVisibility(v.altitude));
+  }
+
+  /** How visible the sun is: an overcast pad hides it until the ascent clears the deck. */
+  private sunPresence(altitude: number): number {
+    return 1 - (1 - this.sky.sun) * this.sky.weight(altitude);
+  }
+
+  private sunY(v: View, dusk: number): number {
+    return v.height * 0.2 - v.altitude * 0.0016 + dusk * v.height * 0.18;
+  }
+
+  /**
+   * The light an object at (x, y) is painted in — the balloon, the train, the
+   * pad gear: a key from this site's sun (warm at golden hour, gone under
+   * overcast), shadows and rim tinted by the sky.
+   */
+  sceneLight(v: View, x: number, y: number, out: SceneLight): void {
+    const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - v.altitude / 2000));
+    const sun = this.sunPresence(v.altitude);
+    let lx = v.width * this.sky.sunX - x;
+    let ly = this.sunY(v, dusk) - y;
+    const length = Math.hypot(lx, ly) || 1;
+    // Diffuse overcast light comes from overhead.
+    lx = (lx / length) * sun;
+    ly = (ly / length) * sun - (1 - sun);
+    const unit = Math.hypot(lx, ly) || 1;
+    out.x = lx / unit;
+    out.y = ly / unit;
+
+    const space = Math.min(1, Math.max(0, (v.altitude - 9000) / 15000));
+    const latex: [number, number, number] = [247, 244, 237];
+    // Sunlight: white, gold at golden hour.
+    const tint = [255, 252 - 34 * dusk, 245 - 76 * dusk];
+    const sky = skyRgb(v.altitude, 'mid', 0, this.sky, this.skyScratch);
+    for (let c = 0; c < 3; c++) {
+      const key = latex[c] * (0.86 + 0.14 * sun) * (tint[c] / 255) + 8 * sun;
+      // Shadow: latex lit only by the sky, deeper as the sky darkens toward space.
+      const shade = (latex[c] * 0.6 + sky[c] * 0.4) * (0.98 - 0.4 * space);
+      // Overcast flattens the contrast between the two.
+      out.key[c] = Math.min(255, key);
+      out.shade[c] = key + (shade - key) * (0.35 + 0.65 * sun);
+      out.rim[c] = Math.min(255, sky[c] * 0.55 + 255 * 0.45);
     }
-    ctx.globalAlpha = 1;
+    out.gloss = sun * (1 - 0.3 * space);
+    out.ground[0] = this.ground[0];
+    out.ground[1] = this.ground[1];
+    out.ground[2] = this.ground[2];
+    out.shadow[0] = this.groundShadow[0];
+    out.shadow[1] = this.groundShadow[1];
+    out.shadow[2] = this.groundShadow[2];
+    // Bounce light from the ground fades within a few hundred metres of it.
+    const above = Math.max(0, (groundScreenY(v.altitude, v.height) - y) / GROUND_K + v.altitude);
+    out.bounce = Math.max(0, 1 - above / 500);
   }
 
   private drawSun(ctx: CanvasRenderingContext2D, v: View): void {
-    const dusk = Math.min(1, Math.max(0, 1 - v.altitude / 2000));
-    const x = v.width * 0.22;
-    const y = v.height * 0.2 - v.altitude * 0.0016 + dusk * v.height * 0.18;
+    const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - v.altitude / 2000));
+    const presence = this.sunPresence(v.altitude);
+    if (presence < 0.01) return;
+    const x = v.width * this.sky.sunX;
+    const y = this.sunY(v, dusk);
     const dark = Math.min(1, v.altitude / 26000);
     const radius = 320 - dark * 190;
     const haloRadius = v.height * 0.9;
@@ -279,6 +386,8 @@ export class Scenery {
     const edgeBlue = Math.round(150 + (120 - 150) * dusk);
     const discGreen = Math.round(252 + (190 - 252) * dusk);
     const discBlue = Math.round(240 + (120 - 240) * dusk);
+    ctx.save();
+    ctx.globalAlpha = presence;
     const halo = ctx.createRadialGradient(x, y, 0, x, y, haloRadius);
     halo.addColorStop(0, `rgba(255,${haloGreen},${haloBlue},${0.1 * (1 - dark * 0.55)})`);
     halo.addColorStop(1, `rgba(255,${haloGreen},${haloBlue},0)`);
@@ -294,11 +403,15 @@ export class Scenery {
     ctx.beginPath();
     ctx.arc(x, y, 14 + (1 - dark) * 8, 0, 6.283);
     ctx.fill();
+    ctx.restore();
   }
 
   private drawLimb(ctx: CanvasRenderingContext2D, v: View): void {
+    if (v.altitude > 2500) this.earth.load();
     const a = Math.min(1, Math.max(0, (v.altitude - 4500) / 6500));
     if (a <= 0.01) return;
+    // The photographic Earth; the procedural limb below stands in until it decodes.
+    if (this.earth.draw(ctx, v, a)) return;
     const t = Math.min(1, v.altitude / 35000);
     // The limb stays pinned to the bottom edge; it flattens and the curvature
     // tightens as you climb, which is the whole "you can see it bending" cue.
@@ -593,7 +706,17 @@ export class Scenery {
 
   private drawGround(ctx: CanvasRenderingContext2D, v: View): void {
     const gy = groundScreenY(v.altitude, v.height);
-    if (gy > v.height + 260) return;
+    // The gear re-registers what can be poked as it draws; off screen, nothing can.
+    this.pad.clearHits();
+    const deck = this.sky.deck;
+    // Above an overcast base the ground is hidden behind the deck.
+    if (deck && this.sky.deckAmount > 0.5 && v.altitude > deck.base + 120) return;
+    this.plateContext = ctx;
+    this.plateView = v;
+    const state = this.terrain.draw(ctx, v, groundScreenY(0, v.height), this.onPlate);
+    if (state === 'drawn' && gy < v.height + 120) this.drawPad(ctx, v, gy);
+    // While the plates decode the sky stands alone; only a failed load falls back.
+    if (state !== 'failed' || gy > v.height + 260) return;
     const fade = Math.min(1, Math.max(0, 1 - (v.altitude - 200) / 900));
     ctx.save();
     ctx.globalAlpha = 0.35 + fade * 0.65;
@@ -613,52 +736,61 @@ export class Scenery {
     ctx.restore();
   }
 
+  /**
+   * The launch gear: the sonde's contact shadow, then the photographed,
+   * interactive pad gear (pad.ts), all under the same scene light as the balloon.
+   */
   private drawPad(ctx: CanvasRenderingContext2D, v: View, gy: number): void {
     const cx = v.width * 0.5;
+    const l = this.padLight;
+    this.sceneLight(v, cx, gy - 40, l);
+    const tone = l.shadow;
 
-    // Pale launch slab and its shallow front face.
-    ctx.fillStyle = '#ece0c8';
-    ctx.fillRect(cx - 100, gy - 5, 200, 10);
-    ctx.fillStyle = '#cdbba0';
-    ctx.fillRect(cx - 100, gy + 5, 200, 5);
-
-    // Tether reel.
-    ctx.fillStyle = '#57534f';
-    ctx.fillRect(cx + 58, gy - 24, 26, 18);
-    ctx.strokeStyle = '#37332f';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx + 71, gy - 15, 7, 0, 6.283);
-    ctx.stroke();
-
-    // Ground station case + whip antenna.
-    ctx.fillStyle = '#4b4743';
-    ctx.fillRect(cx - 104, gy - 20, 30, 14);
-    ctx.strokeStyle = '#37332f';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(cx - 89, gy - 20);
-    ctx.lineTo(cx - 92, gy - 52);
-    ctx.stroke();
-
-    // Windsock — reads the live wind.
-    const mastX = cx + 128;
-    ctx.strokeStyle = '#9a9084';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(mastX, gy);
-    ctx.lineTo(mastX, gy - 62);
-    ctx.stroke();
-    const lift = Math.min(1, v.windStrength * 4 + 0.12);
-    const sockLen = 34;
-    const tipY = gy - 62 + (1 - lift) * 26;
-    ctx.fillStyle = 'rgba(226,102,44,0.92)';
-    ctx.beginPath();
-    ctx.moveTo(mastX, gy - 68);
-    ctx.lineTo(mastX + sockLen * lift + 6, tipY - 4);
-    ctx.lineTo(mastX + sockLen * lift + 6, tipY + 6);
-    ctx.lineTo(mastX, gy - 54);
-    ctx.closePath();
-    ctx.fill();
+    this.pad.draw(ctx, v, l, tone, cx, gy, this.terrain.shown.stage, () => {
+      // The sonde's contact shadow on the pad.
+      const shadow = ctx.createRadialGradient(cx + 6, gy, 2, cx + 6, gy, 40);
+      shadow.addColorStop(0, rgb(tone, 0.4));
+      shadow.addColorStop(1, rgb(tone, 0));
+      ctx.save();
+      ctx.translate(cx, gy);
+      ctx.scale(1, 0.2);
+      ctx.translate(-cx, -gy);
+      ctx.fillStyle = shadow;
+      ctx.fillRect(cx - 40, gy - 50, 100, 100);
+      ctx.restore();
+      this.drawBalloonShadow(ctx, v, l, gy);
+    });
   }
+
+  /**
+   * The envelope's shadow on the ground, thrown away from the sun: sharp and
+   * dark near the pad, spreading and fading as the balloon climbs; under
+   * overcast only a broad, faint darkening.
+   */
+  private drawBalloonShadow(ctx: CanvasRenderingContext2D, v: View, l: SceneLight, gy: number): void {
+    const b = this.balloon;
+    if (b.r <= 0) return;
+    const height = Math.max(0, gy - b.y);
+    const fade = 1 - Math.min(1, height / 760);
+    if (fade <= 0.01) return;
+    const away = l.x >= 0 ? -1 : 1;
+    const slope = Math.min(2.2, Math.abs(l.x) / Math.max(0.35, Math.abs(l.y)));
+    const x = b.x + away * Math.min(v.width * 0.35, height * slope * 0.55 * l.gloss);
+    const spread = 1 + height / 420 + (1 - l.gloss) * 0.8;
+    const rx = b.r * 1.05 * spread;
+    const ry = rx * 0.16;
+    const g = ctx.createRadialGradient(x, gy + 3, 0, x, gy + 3, rx);
+    const alpha = (0.1 + 0.3 * l.gloss) * fade;
+    g.addColorStop(0, rgb(blend(l.shadow, [0, 0, 0], 0.2), alpha));
+    g.addColorStop(0.55, rgb(l.shadow, alpha * 0.7));
+    g.addColorStop(1, rgb(l.shadow, 0));
+    ctx.save();
+    ctx.translate(x, gy + 3);
+    ctx.scale(1, ry / rx);
+    ctx.translate(-x, -(gy + 3));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - rx, gy + 3 - rx, rx * 2, rx * 2);
+    ctx.restore();
+  }
+
 }

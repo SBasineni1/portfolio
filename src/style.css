@@ -6,10 +6,13 @@
    sits directly on the sky with only a soft haze behind it for legibility.
 
    Two typefaces, one display and one data:
-     Inter        — display and UI. Hierarchy is carried by WEIGHT, size, case
-                    and tracking (800 nameplate -> 700 title -> 650 entry ->
-                    550 org -> 400 body). Inter has NO width axis, so
-                    font-stretch must never appear on a display-face rule.
+     Cal Sans     — display and UI (v2, self-hosted, SIL OFL). Hierarchy is
+                    carried by WEIGHT, size, case and the GEOM axis (700
+                    title -> 650 entry -> 550 org -> 400 body). The hero's
+                    name and description are the exception: Inter, 800. Optical size is automatic; display type sets
+                    GEOM 100 for Cal Sans's pure geometric letterforms, text
+                    keeps the default for legibility. It has no width axis,
+                    so font-stretch must never appear on a display-face rule.
      Martian Mono — condensed (76-88%) for anything that is a measurement:
                     altitudes, dates, layer names, telemetry. Its wdth axis IS
                     real and load-bearing; condensing is what makes a number
@@ -24,6 +27,15 @@
      --in    0..1 per panel — how present this section is
    Because they are continuous, nothing here needs a colour transition.
    =================================================================== */
+
+@font-face {
+  font-family: 'Cal Sans';
+  src: url('./assets/fonts/CalSansVF-latin.woff2') format('woff2-variations'),
+    url('./assets/fonts/CalSansVF-latin.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 @property --dark {
   syntax: '<number>';
@@ -68,8 +80,6 @@
   --hair-strong: color-mix(in srgb, var(--ink) 64%, transparent);
   /* Field grid: a survey overlay across the whole viewport. Fainter than a
      trace hairline so it reads as graph paper, never as structure. */
-  --grid: color-mix(in srgb, var(--ink) 9%, transparent);
-  --grid-tick: color-mix(in srgb, var(--ink) 30%, transparent);
 
   --halo-tint: color-mix(
     in srgb,
@@ -102,7 +112,11 @@
   /* One accent, taken from the balloon and payload already on the canvas. */
   --flare: color-mix(in oklab, #d1521c, #f4a052 calc(var(--dark) * 100%));
 
-  --display: 'Inter', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --display: 'Cal Sans', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
+  /* The hero's name and description keep Inter: the one place it stays, by choice. */
+  --hero-face: 'Inter', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
+  /* Display cut: Cal Sans at full geometry. */
+  --geo: 'GEOM' 100;
   --data: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* The tape reserves a full column on the right; panels stop at its edge. */
@@ -110,7 +124,7 @@
   --alt-axis: 14px;
   --chrome-paper: var(--ink-space);
   --gutter: clamp(20px, 5vw, 84px);
-  --panel-w: min(452px, 42vw);
+  --panel-w: min(540px, 44vw);
   --trace-gap: 26px;
   /* Card ground. Deliberately NOT mixed by --dark: see the note above
      .card--project. One paper stock for the whole flight, with its own local
@@ -158,6 +172,7 @@ body {
   background: #7ea7cd;
   color: var(--ink);
   font-family: var(--display);
+  font-optical-sizing: auto;
   font-size: 14px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
@@ -198,48 +213,6 @@ canvas#scene.is-grabbable {
 
 canvas#scene.is-grabbing {
   cursor: grabbing;
-}
-
-/* ------------------------------------------------------------- field --- */
-
-/* A survey grid over the whole viewport: the page is a chart, so it gets
-   chart paper. Fixed, so it reads as the instrument's own reticle rather than
-   as page content scrolling past. Sits above the canvas and below #content.
-   Ticks are drawn at the interior intersections only -- the crossing mark is
-   the point, a continuous ruled grid would fight the trace. */
-.field {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  background-image:
-    linear-gradient(to right, var(--grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 25% 100%, 100% 33.3333%;
-  background-position: 0 0, 0 0;
-}
-
-.field__tick {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  /* Two 1px rules crossing, not a plus glyph -- a glyph would inherit font
-     metrics and drift between breakpoints. */
-  background-image:
-    linear-gradient(to right, var(--grid-tick) 9px, transparent 0),
-    linear-gradient(to bottom, var(--grid-tick) 9px, transparent 0);
-  background-size: 9px 1px, 1px 9px;
-  background-position: center center, center center;
-  background-repeat: no-repeat;
-  transform: translate(-50%, -50%);
-}
-
-@media (max-width: 520px) {
-  /* At phone width the vertical rules crowd the trace; keep the horizons. */
-  .field {
-    background-image: linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-    background-size: 100% 33.3333%;
-  }
 }
 
 a {
@@ -332,7 +305,8 @@ a {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: var(--flare);
+  /* Altitude colour ramp, written by nav.ts; blended perceptually. */
+  background: color-mix(in oklab, var(--icon-from, #d1521c), var(--icon-to, #e07a26) var(--icon-mix, 0%));
 }
 
 .nav__icon svg {
@@ -401,14 +375,227 @@ a {
   position: absolute;
   top: max(14vh, 84px);
   left: var(--gutter);
-  width: min(620px, 80vw);
+  width: calc(100% - var(--gutter) * 2 - var(--tape-w));
+  display: grid;
+  grid-template-columns: minmax(0, 620px) clamp(180px, 19vw, 240px);
+  justify-content: space-between;
+  align-items: start;
+  gap: clamp(24px, 4vw, 64px);
   pointer-events: auto;
 }
 
-/* The nameplate arrives a character at a time, like a clean instrument
-   readout resolving at launch. */
+.hero__intro {
+  min-width: 0;
+}
+
+.profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* -------------------------------------------------------- polaroid ---
+   The portrait is an instant-film print, a physical object like the
+   launch tag: 88:107 card, square photo, deep bottom border, held by tape.
+   A bounded exception to the flat-chrome rules (it is an object, not
+   chrome): it may carry a soft drop shadow, the one in the DOM. */
+
+.polaroid {
+  position: relative;
+  width: 100%;
+  margin-top: 10px;
+  /* Caption type scales with the card, not the viewport. */
+  container-type: inline-size;
+  transform: rotate(-3.5deg);
+  will-change: transform;
+}
+
+.profile__frame {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 88 / 107;
+  perspective: 1000px;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Only the face showing takes clicks. */
+.profile.is-flipped .polaroid__front,
+.profile:not(.is-flipped) .polaroid__back {
+  pointer-events: none;
+}
+
+.profile__rotator {
+  display: block;
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(var(--flip-angle, 0deg));
+  transition: transform var(--flip-duration, 1.5s) cubic-bezier(0.1, 0.7, 0.3, 1);
+}
+
+.profile__face {
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 1px 1.5px rgba(10, 16, 28, 0.22), 0 14px 30px -12px rgba(10, 18, 34, 0.5);
+}
+
+.profile__face--back {
+  transform: rotateY(180deg);
+}
+
+/* Front: cream matte frame, 4.5mm sides on an 88mm card. */
+.polaroid__front {
+  background: #f3efe6;
+}
+
+.polaroid__photo {
+  display: block;
+  position: absolute;
+  top: 5.1%;
+  left: 5.1%;
+  right: 5.1%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #2b2d31;
+}
+
+/* The film sits slightly recessed into the frame. */
+.polaroid__photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22), inset 0 2px 5px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+.polaroid__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 26%;
+  user-select: none;
+  transition: transform 0.5s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* The photo is a link: it leans in a touch on hover. */
+.polaroid__photo:hover img {
+  transform: scale(1.035);
+}
+
+/* A small cloud stuck over the top edge, holding the print where tape would.
+   Coloured per site (main.ts → --cloud-top / --cloud-base), muted and
+   slightly translucent so it sits in the scene's light. */
+.polaroid__cloud {
+  position: absolute;
+  top: -9.5%;
+  left: 50%;
+  width: 48%;
+  margin-left: -24%;
+  /* Stuck on at an angle, the way tape never goes on straight. */
+  transform: rotate(-11deg);
+  opacity: 0.93;
+  filter: drop-shadow(0 2px 3px rgba(20, 30, 46, 0.12));
+  overflow: visible;
+  pointer-events: none;
+}
+
+.polaroid__cloud-top {
+  stop-color: var(--cloud-top, #e9edf2);
+  fill: var(--cloud-top, #e9edf2);
+  transition: stop-color 0.6s ease-out, fill 0.6s ease-out;
+}
+
+.polaroid__cloud-base {
+  stop-color: var(--cloud-base, #b6c3d1);
+  transition: stop-color 0.6s ease-out;
+}
+
+/* Back: the black film back, with the GitHub avatar stuck on and the handle
+   written below. */
+.polaroid__back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #19191b;
+}
+
+.polaroid__sticker {
+  display: block;
+  transition: transform 0.4s cubic-bezier(0, 0, 0.2, 1);
+  width: 46%;
+  aspect-ratio: 1;
+  padding: 6%;
+  border-radius: 4px;
+  background: #f3efe6;
+  transform: rotate(4deg);
+}
+
+.polaroid__sticker img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.polaroid__handle {
+  font-family: var(--data);
+  font-stretch: 82%;
+  font-size: max(8.5px, 4.6cqw);
+  letter-spacing: 0.04em;
+  color: rgba(243, 239, 230, 0.78);
+}
+
+.polaroid__sticker:hover {
+  transform: rotate(0deg) scale(1.05);
+}
+
+/* The hint rides inside the print's wrapper, so it shares its angle. It is
+   also the flip button for keyboards. */
+.profile__hint {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: center;
+  text-shadow: var(--halo);
+  cursor: pointer;
+}
+
+.profile__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The nameplate types itself out, holds, wipes and goes again — an
+   instrument readout that keeps reprinting, not a one-shot reveal. Both
+   hero lines stack three copies of their string in one grid cell; see
+   buildLayer() in ui/typewriter.ts for what each one is for. */
 .hero__name {
   margin: 0;
+  font-family: var(--hero-face);
   font-weight: 800;
   font-size: clamp(34px, 6.6vw, 82px);
   /* Set solid: line-height == font-size, so the two lines lock into one block. */
@@ -420,30 +607,79 @@ a {
   color: var(--ink);
 }
 
-.hero__word {
-  display: inline-block;
+.hero__name,
+.hero__tagline {
+  display: grid;
+}
+
+.hero__ghost,
+.hero__line {
+  grid-area: 1 / 1;
+}
+
+/* The tagline is not un-typed at the end of a cycle, it is simply gone —
+   backspacing a full sentence reads as a stunt at this length. */
+.hero__line {
+  transition: opacity 0.26s ease-out;
+}
+
+.hero__line.is-gone {
+  opacity: 0;
+}
+
+/* Hidden but still laid out: this is what keeps the block from resizing as
+   the line under it fills in. */
+.hero__ghost {
+  visibility: hidden;
+}
+
+.hero__read {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
-.hero__char {
+/* A block caret rather than a bar — it belongs to the same instrument
+   vocabulary as the altitude box. It blinks only at rest; while characters
+   are landing it stays lit, the way a real terminal cursor does. */
+.hero__caret {
   display: inline-block;
+  width: 0.06em;
+  height: 0.78em;
+  margin-left: 0.06em;
+  vertical-align: -0.04em;
+  background: var(--flare);
   opacity: 0;
-  filter: blur(8px);
-  transform: translateY(0.55em) rotate(2deg);
-  animation: hero-char-arrive 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: calc(0.08s + var(--char-order) * 0.045s);
 }
 
-@keyframes hero-char-arrive {
-  to {
+.hero__line.is-active .hero__caret {
+  animation: hero-caret 1.06s steps(2, jump-none) infinite;
+}
+
+.hero__line.is-live .hero__caret {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes hero-caret {
+  0%,
+  50% {
     opacity: 1;
-    filter: blur(0);
-    transform: none;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
   }
 }
 
 .hero__tagline {
   margin: 20px 0 0;
+  font-family: var(--hero-face);
   max-width: 48ch;
   font-size: 16px;
   line-height: 1.5;
@@ -451,51 +687,372 @@ a {
   text-shadow: var(--halo);
 }
 
-.hero__hint {
-  margin: 32px 0 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  max-width: 46ch;
-  padding: 13px 15px;
-  border: 1px solid var(--hair-strong);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--chrome-paper) 42%, transparent);
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--ink-day) 12%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  font-size: 12.5px;
-  line-height: 1.65;
-  color: var(--ink-2);
-  opacity: calc(1 - var(--launch));
-  transform: translateY(calc(var(--launch) * -12px)) scale(calc(1 - var(--launch) * 0.025));
-  transform-origin: left center;
-  will-change: opacity, transform;
-}
-
-.hero__hint-icon {
-  display: grid;
-  flex: 0 0 22px;
-  width: 22px;
-  height: 22px;
-  place-items: center;
-  margin-top: 1px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--chrome-paper);
-  font-family: var(--data);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.hero__key {
+.hero__key,
+.toast__key {
   color: var(--ink);
   font-weight: 650;
 }
 
-body.has-grabbed .hero__hint {
-  opacity: calc((1 - var(--launch)) * 0.38);
+/* --------------------------------------------------------- site picker ---
+   A launch tag. Real sondes fly with a printed manila "if found, return"
+   tag; this is that object: card stock, one ink, a chamfered end with a
+   reinforced punched hole. No greys — hierarchy is size and weight in a
+   single ink. Pad-only: it fades out with --launch. */
+
+.site-picker {
+  --tag: #e6d6ae;
+  --tag-ink: #16120b;
+  position: fixed;
+  left: var(--gutter);
+  bottom: 16px;
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 30px;
+  background: var(--tag);
+  color: var(--tag-ink);
+  border-radius: 0 6px 6px 0;
+  /* Chamfered tag end, and the punched hole the string would run through. */
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  -webkit-mask: radial-gradient(circle 3.5px at 14px 50%, transparent 97%, #000 100%);
+  mask: radial-gradient(circle 3.5px at 14px 50%, transparent 97%, #000 100%);
+  /* --enter is the GSAP entrance (1 when it has finished or never runs). */
+  opacity: calc((1 - var(--launch)) * var(--enter, 1));
+  transition: bottom 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-picker[hidden] {
+  display: none;
+}
+
+/* The brass-ring reinforcement around the hole. */
+.site-picker__hole {
+  position: absolute;
+  left: 7.5px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-top: -6.5px;
+  border: 2px solid #9a7a3c;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.site-picker__readout {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.site-picker__no {
+  display: inline-flex;
+  align-items: flex-start;
+  font-family: var(--display);
+  font-variation-settings: var(--geo);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-picker__no > [data-site-count] {
+  display: inline-block;
+}
+
+.site-picker__of {
+  margin: 1px 0 0 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.site-picker__name {
+  display: inline-block;
+  min-width: 118px;
+  padding-left: 11px;
+  border-left: 1.5px solid var(--tag-ink);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.site-picker__steps {
+  display: flex;
+  gap: 2px;
+}
+
+.site-picker__step {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--tag-ink);
+  cursor: pointer;
+  transition: background-color 0.2s cubic-bezier(0, 0, 0.2, 1), color 0.2s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Hover inverts: ink block, tag-coloured chevron, like a stamped mark. */
+.site-picker__step:hover {
+  background: var(--tag-ink);
+  color: var(--tag);
+}
+
+.site-picker__step svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+/* Plates loading: a short ink bar sweeping along the tag's bottom edge. */
+.site-picker__load {
+  position: absolute;
+  left: 30px;
+  right: 8px;
+  bottom: 3px;
+  height: 1.5px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.site-picker__load > span {
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--tag-ink);
+}
+
+/* --------------------------------------------------------- launch note ---
+   The one piece of instruction on the page. It is chrome, not sounding: a
+   dark slab in the same ink as the nav, parked bottom-left clear of the
+   tape column, and gone the moment the flight actually starts. Its ground
+   does NOT blend with --dark — like the nav, it holds one value the whole
+   way up so it never dissolves into the sky it sits on. */
+
+.toast {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 16px;
+  margin-inline: auto;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(672px, calc(100% - 32px));
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #0d0d0d;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 18px 44px rgba(4, 10, 20, 0.42);
+  color: #fff;
+  font-family: var(--display);
+  opacity: 0;
+  transform: translateY(16px) scale(0.985);
+  transform-origin: 50% 100%;
+  transition: opacity 0.34s ease-out, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+
+.toast.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* Leaving is faster than arriving: the note is getting out of the way of
+   something the reader has already started doing. */
+.toast.is-gone {
+  opacity: 0;
+  transform: translateY(10px) scale(0.99);
+  transition-duration: 0.2s, 0.2s;
+  pointer-events: none;
+}
+
+/* Desktop: a callout docked beside the balloon. toast.ts positions it with
+   left/top, not `translate`: GSAP folds a CSS translate into its own
+   transform when a tween starts, which would apply the offset twice.
+   The copy, the close button and the actions stack in a narrower slab. */
+.toast.is-docked {
+  inset: 0 auto auto 0;
+  bottom: auto;
+  margin: 0;
+  width: 352px;
+  flex-wrap: wrap;
+  transform-origin: 0 50%;
+}
+
+.toast.is-docked.is-left {
+  transform-origin: 100% 50%;
+}
+
+.toast.is-docked .toast__close {
+  order: 1;
+}
+
+.toast.is-docked .toast__actions {
+  order: 2;
+  flex: 1 1 100%;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* The pointer: a small diamond on the side facing the balloon. */
+.toast__pointer {
+  display: none;
+}
+
+.toast.is-docked .toast__pointer {
+  display: block;
+  position: absolute;
+  left: -5px;
+  top: var(--pointer-y, 50%);
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  background: #0d0d0d;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.toast.is-docked.is-left .toast__pointer {
+  left: auto;
+  right: -5px;
+}
+
+.toast__dot {
+  display: grid;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8873c;
+  color: #0d0d0d;
+  font-family: var(--data);
+  font-size: 10px;
+  font-weight: 700;
+  font-stretch: 82%;
+  line-height: 1;
+  position: relative;
+}
+
+/* A one-off signal ring off the dot as the note arrives (animated by GSAP). */
+.toast__ping {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid #e8873c;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.toast__title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+}
+
+.toast__text {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.toast__key {
+  color: rgba(255, 255, 255, 0.94);
+  font-weight: 600;
+}
+
+/* Actions are their own column on the right rather than a third row, so the
+   slab is only as tall as the copy. They wrap under the text on narrow
+   screens, where there is no room for two columns. */
+.toast__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.toast__action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: text-decoration-color 0.18s ease-out;
+}
+
+.toast__action:hover,
+.toast__action:focus-visible {
+  text-decoration-color: rgba(255, 255, 255, 0.9);
+}
+
+.toast__sep {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 13px;
+}
+
+.toast__close {
+  display: grid;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  align-self: flex-start;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: color 0.18s ease-out, background-color 0.18s ease-out;
+}
+
+.toast__close:hover,
+.toast__close:focus-visible {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.toast__close svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
 }
 
 /* ------------------------------------------------------------ panels ---
@@ -551,76 +1108,111 @@ body.has-grabbed .hero__hint {
   right: var(--tape-w);
 }
 
-/* Altitude annotation: the reading this section was taken at. */
+/* Section kicker: number, layer of sky, altitude range. Plain type in the
+   ink family — a caption, not a coloured instrument readout. */
 .panel__band {
   display: flex;
   align-items: baseline;
-  gap: 9px;
-  margin: 0 0 8px;
-  font-family: var(--data);
-  font-stretch: 78%;
-  font-weight: 400;
-  font-size: 9.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
-.panel__band span:first-child {
-  color: var(--flare);
+.panel__index {
+  color: var(--ink);
+  font-weight: 650;
 }
 
-.panel__band span:last-child::before {
-  content: '/ ';
-  color: var(--ink-3);
+/* A short rule between the number and the caption, in place of punctuation. */
+.panel__index::after {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  margin-left: 10px;
+  vertical-align: 0.3em;
+  background: var(--hair-strong);
 }
 
-/* Header, with the tick that crosses the trace. */
+.panel__range::before {
+  content: '·';
+  margin-right: 10px;
+}
+
+/* The section title: large, sentence case, set solid. */
 .panel__title {
   position: relative;
   margin: 0 0 18px;
-  padding-bottom: 11px;
-  border-bottom: 1px solid var(--hair-strong);
   font-weight: 700;
-  font-size: 15px;
+  font-variation-settings: var(--geo);
+  font-size: clamp(32px, 3.2vw, 46px);
   line-height: 1;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  letter-spacing: -0.028em;
   color: var(--ink);
 }
 
-.panel__title::before {
-  content: '';
-  position: absolute;
-  left: calc(var(--trace-gap) * -1);
-  top: 0.44em;
-  width: 13px;
-  height: 1px;
-  background: var(--flare);
+/* The lede sits a step above the body; body copy keeps a readable measure. */
+.panel__lede,
+.station__lede {
+  max-width: 44ch;
+  margin: 0 0 18px;
+  font-size: clamp(17px, 1.35vw, 19px);
+  line-height: 1.5;
+  letter-spacing: -0.012em;
+  color: var(--ink);
 }
 
-.panel__body p,
-.panel__lede {
-  margin: 0 0 13px;
-  font-size: 13.5px;
-  line-height: 1.75;
+.panel__body p:not(.panel__lede) {
+  max-width: 56ch;
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.65;
   color: var(--ink-2);
 }
 
-.panel__body p:last-child {
+.panel__body > :last-child {
   margin-bottom: 0;
 }
 
-.panel__foot {
+/* At a glance: label/value rows between hairlines. */
+.facts {
+  display: grid;
   margin: 24px 0 0;
-  padding-top: 12px;
   border-top: 1px solid var(--hair);
-  font-family: var(--data);
-  font-stretch: 78%;
-  font-size: 10px;
-  line-height: 1.8;
-  letter-spacing: 0.02em;
+}
+
+.facts__row {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.facts dt {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.panel__foot {
+  margin: 26px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--ink-3);
 }
 
@@ -738,8 +1330,7 @@ body.has-grabbed .hero__hint {
    instead of an accent rule under the text. This keeps --flare rationed (see
    DESIGN.md section 2) and keeps the chrome layer free of any fill or border
    at rest. The frame is a ::before so it never affects layout. */
-.entry__links a,
-.links a {
+.entry__links a {
   position: relative;
   display: inline-block;
   padding: 2px 6px;
@@ -751,8 +1342,7 @@ body.has-grabbed .hero__hint {
   cursor: pointer;
 }
 
-.entry__links a::before,
-.links a::before {
+.entry__links a::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -765,8 +1355,7 @@ body.has-grabbed .hero__hint {
   transition: border-color 0.3s cubic-bezier(0, 0, 0.2, 1);
 }
 
-.entry__links a:hover::before,
-.links a:hover::before {
+.entry__links a:hover::before {
   border-color: var(--ink);
 }
 
@@ -775,29 +1364,54 @@ body.has-grabbed .hero__hint {
    stack. (The reference site shipped no visible focus state at all; that part
    is deliberately not copied.) */
 
+/* Contact: full-width rows between hairlines. The whole row is the link;
+   the arrow steps out on hover. */
 .links {
-  margin: 20px 0 0;
+  display: grid;
+  margin: 22px 0 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  gap: 13px;
+  border-top: 1px solid var(--hair);
 }
 
 .links li {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
+  border-bottom: 1px solid var(--hair);
 }
 
-.links .links__key {
-  width: 68px;
-  flex: none;
-  font-family: var(--data);
-  font-stretch: 76%;
-  font-size: 9.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+.links__row {
+  display: grid;
+  grid-template-columns: 112px 1fr auto;
+  align-items: baseline;
+  gap: 16px;
+  margin: 0;
+  padding: 14px 0;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.links__key {
+  font-size: 13px;
+  font-weight: 500;
   color: var(--ink-3);
+}
+
+.links__value {
+  font-size: 17px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.links__arrow {
+  font-size: 15px;
+  color: var(--ink-3);
+  transition: transform 0.3s cubic-bezier(0, 0, 0.2, 1), color 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.links__row:hover .links__arrow,
+.links__row:focus-visible .links__arrow {
+  color: var(--ink);
+  transform: translate(3px, -3px);
 }
 
 /* ------------------------------------------------ stations & cards ---
@@ -826,18 +1440,10 @@ body.has-grabbed .hero__hint {
 
 .station .panel__title {
   margin-bottom: 0;
-  padding-bottom: 10px;
 }
 
-/* The lede is the Tagline step of the scale (16/1.5) — no new size. Tracking
-   is Linear's body value expressed proportionally (-0.165px at 15px). */
 .station__lede {
-  max-width: 48ch;
-  margin: 12px 0 0;
-  font-size: 16px;
-  line-height: 1.55;
-  letter-spacing: -0.011em;
-  color: var(--ink-2);
+  margin: 14px 0 0;
 }
 
 .station__body {
@@ -982,9 +1588,10 @@ body.low-power .rail > .card {
   color: var(--ink);
   font-family: var(--display);
   font-size: clamp(64px, 10vw, 176px);
-  font-weight: 800;
+  font-weight: 700;
+  font-variation-settings: var(--geo);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.015em;
   white-space: nowrap;
 }
 
@@ -1152,9 +1759,10 @@ body.low-power .rail > .card {
   bottom: 18px;
   color: #f4f7fa;
   font-size: clamp(40px, 5vw, 84px);
-  font-weight: 800;
+  font-weight: 700;
+  font-variation-settings: var(--geo);
   line-height: 0.92;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.015em;
   opacity: 0.16;
 }
 
@@ -1423,6 +2031,13 @@ body.low-power .rail > .card {
 
   .hero {
     width: calc(100vw - var(--gutter) - var(--tape-w));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .profile {
+    width: 160px;
+    justify-self: start;
   }
 
   .panel--right {
@@ -1534,10 +2149,35 @@ body.low-power .rail > .card {
     letter-spacing: -0.018em;
   }
 
-  .panel__title {
-    letter-spacing: 0.16em;
+  .profile {
+    width: 140px;
   }
 
+
+  .site-picker {
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .toast {
+    bottom: 10px;
+    width: calc(100% - 20px);
+    padding: 13px 14px 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Two columns do not fit: the actions drop to their own right-aligned row
+     below the dot, copy and close, which keep the first row. */
+  .toast__close {
+    order: 1;
+  }
+
+  .toast__actions {
+    order: 2;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
 }
 
 /* --------------------------------------------------- reduced motion ----
@@ -1545,6 +2185,25 @@ body.low-power .rail > .card {
    nothing translates or draws itself. */
 
 @media (prefers-reduced-motion: reduce) {
+  .profile__rotator,
+  .profile__face--back {
+    transform: none;
+    transition: none;
+  }
+
+  .polaroid {
+    transform: rotate(-3.5deg);
+  }
+
+  .profile__face--back,
+  .profile.is-flipped .profile__face--front {
+    visibility: hidden;
+  }
+
+  .profile.is-flipped .profile__face--back {
+    visibility: visible;
+  }
+
   html {
     scroll-behavior: auto;
   }
@@ -1553,14 +2212,20 @@ body.low-power .rail > .card {
     transform: none;
   }
 
-  .hero__char {
-    opacity: 1;
-    filter: none;
-    transform: none;
+  .hero__caret {
     animation: none;
   }
 
-  .hero__hint {
+  .toast {
+    transform: none;
+    transition-duration: 0.01s;
+  }
+
+  .site-picker {
+    transition: none;
+  }
+
+  .toast.is-gone {
     transform: none;
   }
 

@@ -51,8 +51,6 @@ export class Balloon {
   readonly ringCount: number;
   readonly ropeCount: number;
   readonly chuteCount: number;
-  readonly restVarX: number;
-  readonly restVarY: number;
 
   readonly ring: Int32Array;
   readonly rope: Int32Array;
@@ -130,7 +128,7 @@ export class Balloon {
     this.cSkip = new Int32Array(N);
     this.cSpoke = new Int32Array(N);
 
-    // A full photographic profile with a softened taper into the neck.
+    // A full sounding-balloon profile with a softened taper into the neck.
     for (let i = 0; i < N; i++) {
       const a = -Math.PI / 2 + (i / N) * Math.PI * 2;
       const v = Math.sin(a);
@@ -139,24 +137,6 @@ export class Balloon {
       this.profileY[i] = v * f;
       this.shredSeed[i] = (i * 0.61803398875) % 1;
     }
-    let profileCx = 0;
-    let profileCy = 0;
-    for (let i = 0; i < N; i++) {
-      profileCx += this.profileX[i];
-      profileCy += this.profileY[i];
-    }
-    profileCx /= N;
-    profileCy /= N;
-    let varianceX = 0;
-    let varianceY = 0;
-    for (let i = 0; i < N; i++) {
-      const dx = this.profileX[i] - profileCx;
-      const dy = this.profileY[i] - profileCy;
-      varianceX += dx * dx;
-      varianceY += dy * dy;
-    }
-    this.restVarX = varianceX / N;
-    this.restVarY = varianceY / N;
     let area = 0;
     for (let i = 0; i < N; i++) {
       const j = (i + 1) % N;
