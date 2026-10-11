@@ -101,7 +101,9 @@ painted, because only a painted envelope can deform with the Verlet ring. Everyt
   light, hazed toward the limb, and ringed by a soft atmosphere glow in the alpha.
 
 Nothing renders live. The image starts very wide, so the horizon reads nearly flat at 5 km, and
-narrows to just wider than the viewport by burst, so the curvature grows. It loads lazily above
+narrows to just wider than the viewport by burst, so the curvature grows. It must always reach
+the bottom edge: on a tall phone it first takes a wider crop, up to 1.9 viewports so the curve
+still reads, and then sits the horizon lower. It never stretches its last rows, which streaks. It loads lazily above
 2.5 km, and the procedural limb stands in until it decodes. A live ray-cast globe was tried first
 (2026-10-09) and reverted because it rendered too soft at viewport scale.
 
@@ -329,6 +331,8 @@ the middle of the screen:
 - **Ground.** It is raised to 200px above the bottom edge (`setGroundInset`, below 560px), so the
   pad and gear stay clear of the launch tag and the compact launch note along the bottom. The
   near plate's last tenth is stretched down to fill the foreground below the ground line.
+- **Panel position.** Panels stay bottom-anchored, but their top never rises above 84px, just
+  under the fixed nav. A tall panel runs off the bottom rather than hiding its heading.
 - **Text panels.** About parks the balloon off-screen like a station does, latching at `--in` 0.75
   so it cannot fire before release at the pad. Contact keeps the balloon, because its copy is about
   the parachute in view. This applies below 900px, wherever panels are bottom-anchored.

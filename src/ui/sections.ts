@@ -32,6 +32,9 @@ export type RevealListener = (section: HTMLElement, part: 'head' | 'body', shown
 /** 0 → "0", 900 → "0.9", 10000 → "10": kilometres without trailing zeros. */
 const km = (m: number): string => String(Math.round(m / 100) / 10);
 
+/** Viewport px a phone panel's top must stay below: the fixed nav plus a gap. */
+const NAV_CLEARANCE = 84;
+
 /** Distance, in viewports, at which a section has faded out entirely. */
 const REVEAL_FAR = 0.85;
 /** Length of the fade, in viewports. Full opacity by 0.35 viewports out. */
@@ -154,8 +157,10 @@ export class Sections {
       const center = progressForAltitude(item.altitude) * range + viewportHeight * 0.5;
       item.center = center;
       const h = item.el.offsetHeight;
+      // Bottom-anchored on phones, but never higher than just under the fixed
+      // nav: a tall panel runs off the bottom rather than hiding its heading.
       const top = bottomAnchored
-        ? center + viewportHeight * 0.5 - h - 74
+        ? center - viewportHeight * 0.5 + Math.max(NAV_CLEARANCE, viewportHeight - h - 74)
         : center - h / 2;
       item.el.style.top = `${Math.round(Math.max(viewportHeight * 0.06, top))}px`;
     }

@@ -40,20 +40,24 @@ export class EarthImage {
     if (!this.ready || !image) return false;
     const t = Math.min(1, Math.max(0, (v.altitude - 4500) / 30500));
     const eased = 1 - (1 - t) ** 2;
-    const width = v.width * (3.1 - 1.95 * eased);
-    const height = (width * image.naturalHeight) / image.naturalWidth;
+    const aspect = image.naturalWidth / image.naturalHeight;
     // The top of the image is the atmosphere glow just above the horizon.
-    const top = v.height * (0.9 - 0.2 * eased);
+    let top = v.height * (0.9 - 0.2 * eased);
+    let width = v.width * (3.1 - 1.95 * eased);
+    // The image must always reach the bottom edge (stretching past it streaks).
+    // A tall phone first takes a wider crop, up to 1.9 viewports so the curve
+    // still reads, then sets the horizon lower for whatever is left.
+    const cover = (v.height + 24 - top) * aspect;
+    if (width < cover) {
+      width = Math.max(width, Math.min(cover, v.width * 1.9));
+      top = Math.max(top, v.height + 24 - width / aspect);
+    }
+    const height = width / aspect;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(image, (v.width - width) * 0.5, top, width, height);
-    // Fill below the image edge, should the viewport be taller than it reaches.
-    const bottom = top + height;
-    if (bottom < v.height + 24) {
-      ctx.drawImage(image, 0, image.naturalHeight - 2, image.naturalWidth, 2, (v.width - width) * 0.5, bottom - 1, width, v.height + 24 - bottom);
-    }
     ctx.restore();
     return true;
   }
