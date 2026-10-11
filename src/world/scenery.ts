@@ -60,8 +60,19 @@ function makeBushBrush(): HTMLCanvasElement {
   return canvas;
 }
 
+/**
+ * Viewport px between the bottom edge and the ground line at the pad. Phones
+ * raise it so the pad and gear clear the launch tag and note, which sit along
+ * the bottom edge there; the near plate then fills the foreground below.
+ */
+let groundInset = 96;
+
+export function setGroundInset(px: number): void {
+  groundInset = px;
+}
+
 export function groundScreenY(altitude: number, height: number): number {
-  return height - 96 + altitude * GROUND_K;
+  return height - groundInset + altitude * GROUND_K;
 }
 
 export interface View {

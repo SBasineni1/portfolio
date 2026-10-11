@@ -42,6 +42,8 @@ export class Sections {
   private readonly content: HTMLElement;
   private readonly relayouts: (() => void)[] = [];
   private pageHeight = 0;
+  /** Phone-width layout: text panels also send the balloon off-screen (see update). */
+  private narrow = false;
   private exitState = 0;
 
   constructor(
@@ -145,6 +147,7 @@ export class Sections {
    */
   layout(pageHeight: number, viewportHeight: number, bottomAnchored = false): void {
     this.pageHeight = pageHeight;
+    this.narrow = bottomAnchored;
     this.content.style.height = `${pageHeight}px`;
     const range = Math.max(1, pageHeight - viewportHeight);
     for (const item of this.items) {
@@ -178,6 +181,26 @@ export class Sections {
       const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
       const eased = t * t * (3 - 2 * t);
       let sweep = eased;
+      // On a phone there is no room beside a text panel either, so About
+      // parks the balloon off-screen too. Contact keeps it: its copy is about
+      // the parachute in view. Panels latch later (0.75) than stations, so
+      // About — already faintly in at the pad — cannot fire before release.
+      const panelExit = this.narrow && item.kind === 'panel' && item.band.id !== 'contact';
+      if (panelExit) {
+        if (!item.exit && eased >= 0.75) {
+          item.exit = true;
+          this.onStationEnter(item.band);
+        } else if (item.exit && eased < 0.3) {
+          item.exit = false;
+        }
+        if (item.exit) {
+          exit = 1;
+          focus = Math.max(focus, eased);
+        }
+      } else if (item.kind === 'panel') {
+        // Rotated out of the phone layout mid-read: release the balloon.
+        item.exit = false;
+      }
       if (item.kind === 'station') {
         focus = Math.max(focus, eased);
         if (!item.exit && eased >= 0.15) {

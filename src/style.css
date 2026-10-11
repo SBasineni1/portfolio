@@ -2145,12 +2145,80 @@ body.low-power .rail > .card {
     padding: 6px 12px;
   }
 
+  /* Hero: the print sits top-right beside the name, and the tagline runs
+     full width underneath, so the middle of the screen is the balloon's. */
+  .hero {
+    /* Sits up under the nav: the balloon needs the middle of a short screen. */
+    top: 72px;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    grid-template-areas:
+      'name photo'
+      'line line';
+    column-gap: 16px;
+    row-gap: 12px;
+    align-items: center;
+  }
+
+  .hero__intro {
+    display: contents;
+  }
+
   .hero__name {
+    grid-area: name;
     letter-spacing: -0.018em;
   }
 
+  .hero__tagline {
+    grid-area: line;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
   .profile {
-    width: 140px;
+    grid-area: photo;
+    width: 104px;
+    justify-self: end;
+  }
+
+  .profile__hint {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  /* Cover titles wrap instead of bleeding off a narrow card. */
+  .card__big {
+    font-size: 13vw;
+    line-height: 0.92;
+    white-space: normal;
+  }
+
+  /* Contact rows stack the label over the value, so addresses never break mid-word. */
+  .links__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'key arrow'
+      'value arrow';
+    row-gap: 3px;
+  }
+
+  .links__key {
+    grid-area: key;
+  }
+
+  .links__value {
+    grid-area: value;
+    font-size: 16px;
+  }
+
+  .links__arrow {
+    grid-area: arrow;
+    align-self: center;
+  }
+
+  .facts__row {
+    grid-template-columns: 88px 1fr;
+    gap: 12px;
   }
 
 
@@ -2162,8 +2230,19 @@ body.low-power .rail > .card {
   .toast {
     bottom: 10px;
     width: calc(100% - 20px);
-    padding: 13px 14px 12px;
+    padding: 11px 12px 10px;
+    gap: 10px;
     flex-wrap: wrap;
+  }
+
+  .toast__title {
+    font-size: 13.5px;
+  }
+
+  .toast__text {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.45;
   }
 
   /* Two columns do not fit: the actions drop to their own right-aligned row

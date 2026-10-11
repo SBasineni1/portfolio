@@ -4,7 +4,7 @@ import { ExitTrack, EXIT_CLEARANCE } from './physics/track';
 import { windAt } from './physics/wind';
 import { attachInput } from './input';
 import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
-import { Scenery, groundScreenY, type View } from './world/scenery';
+import { Scenery, groundScreenY, setGroundInset, type View } from './world/scenery';
 import { PadGear } from './world/pad';
 import { drawBalloon, type DrawOptions } from './world/render';
 import { sceneLight } from './world/paint';
@@ -241,6 +241,8 @@ function resize(): void {
   canvas.style.height = `${height}px`;
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+  // Phones carry the launch tag and note along the bottom edge: lift the pad clear of them.
+  setGroundInset(width < 560 ? 200 : 96);
   scenery.resize(width, height);
 
   balloon.recenter((width - oldW) * 0.5, (height - oldH) * 0.42);

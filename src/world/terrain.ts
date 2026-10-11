@@ -279,11 +279,23 @@ export class SiteTerrain {
       }
       const height = Math.min(drawHeight, bottom - top + 1);
       ctx.globalAlpha = alpha * fade;
-      blit(ctx, cached ? set.scaled[i] : set.images[i], left, top, drawWidth, height, v.width);
+      const source = cached ? set.scaled[i] : set.images[i];
+      blit(ctx, source, left, top, drawWidth, height, v.width);
       const haze = layerHaze(layer, v.altitude);
       if (haze > 0.005) {
         ctx.globalAlpha = alpha * fade * haze;
         blit(ctx, set.hazed[i], left, top, drawWidth, height, v.width);
+      }
+      // When the ground sits high (phones), the nearest plate ends above the
+      // screen's bottom edge: run its last tenth on down, the nearest ground.
+      const end = top + drawHeight;
+      if (i === layers.length - 1 && end < v.height + 24) {
+        ctx.globalAlpha = alpha * fade;
+        stretchFoot(ctx, source, left, end, drawWidth, v.height + 24 - end, v.width);
+        if (haze > 0.005) {
+          ctx.globalAlpha = alpha * fade * haze;
+          stretchFoot(ctx, set.hazed[i], left, end, drawWidth, v.height + 24 - end, v.width);
+        }
       }
       this.frame.left = left;
       this.frame.top = top;
@@ -315,6 +327,24 @@ function blit(
   const k = source.width / drawWidth;
   const sourceHeight = Math.min(source.height, height * k);
   ctx.drawImage(source, from * k, 0, (to - from) * k, sourceHeight, left + from, top, to - from, sourceHeight / k);
+}
+
+/** Stretch the bottom tenth of a plate over `height` px below `top` (visible columns only). */
+function stretchFoot(
+  ctx: CanvasRenderingContext2D,
+  source: CanvasImageSource & { width: number; height: number },
+  left: number,
+  top: number,
+  drawWidth: number,
+  height: number,
+  viewWidth: number,
+): void {
+  const from = Math.max(0, -24 - left);
+  const to = Math.min(drawWidth, viewWidth + 24 - left);
+  if (to <= from || height <= 0) return;
+  const k = source.width / drawWidth;
+  const band = Math.max(2, source.height * 0.1);
+  ctx.drawImage(source, from * k, source.height - band, (to - from) * k, band - 1, left + from, top - 1, to - from, height + 1);
 }
 
 function ensureScaled(set: PlateSet, drawWidth: number, ratio: number): void {

@@ -99,6 +99,8 @@ export function mountProfile(): Polaroid {
   status.setAttribute('aria-live', 'polite');
   host.append(card, status);
 
+  // Touch screens are tapped, not clicked.
+  const verb = window.matchMedia('(pointer: coarse)').matches ? 'Tap' : 'Click';
   let angle = 0;
   let flips = 0;
   let flipped = false;
@@ -111,7 +113,7 @@ export function mountProfile(): Polaroid {
 
   const sync = (): void => {
     // Starts as an invitation; after that it names the link on the face showing.
-    hint.textContent = flips === 0 ? 'Click here to flip' : flipped ? 'GitHub! Click again' : 'LinkedIn! Click again';
+    hint.textContent = flips === 0 ? `${verb} here to flip` : flipped ? `GitHub! ${verb} again` : `LinkedIn! ${verb} again`;
     hint.setAttribute('aria-label', flipped ? 'Flip back to the photo' : 'Flip the photo over');
     hint.setAttribute('aria-pressed', String(flipped));
     // Only the face showing can be clicked or tabbed to.

@@ -321,6 +321,21 @@ Base 4px. Layout tokens: `--gutter: clamp(20px, 5vw, 84px)`, `--panel-w: min(452
 - Sections alternate left/right off the trace; the trace is continuous down the whole page.
 - Breakpoints: 900px (the altitude indicator narrows to 72px), 520px (nav and trace tighten).
 
+### Phones (≤520px, upright)
+An upright phone has no room beside anything, so the layout stacks around the balloon, which owns
+the middle of the screen:
+- **Hero.** It sits up under the nav (72px). The name, wrapping to two lines, and a 104px
+  Polaroid share the first row; the tagline runs full width beneath at 14/1.45.
+- **Ground.** It is raised to 200px above the bottom edge (`setGroundInset`, below 560px), so the
+  pad and gear stay clear of the launch tag and the compact launch note along the bottom. The
+  near plate's last tenth is stretched down to fill the foreground below the ground line.
+- **Text panels.** About parks the balloon off-screen like a station does, latching at `--in` 0.75
+  so it cannot fire before release at the pad. Contact keeps the balloon, because its copy is about
+  the parachute in view. This applies below 900px, wherever panels are bottom-anchored.
+- **Smaller pieces.** Cover titles wrap at 13vw instead of bleeding off the card. Contact rows put
+  the label over the value, so addresses never break mid-word. Fact rows use an 88px label column.
+- **Touch wording.** Touch screens read "Tap", not "Click", in the Polaroid hint.
+
 ### Field grid
 Removed (2026-10-10). There is no overlay between the canvases and `#content`; do not reintroduce
 one without the user asking.
