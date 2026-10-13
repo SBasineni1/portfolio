@@ -135,6 +135,7 @@
   --card-radius: 16px;
   --card-pad: 24px;
   --rail-gap: 20px;
+  --rail-divider-width: 72px;
   --rail-fade: 64px;
   /* Default card accent. Lifted off the sky's own value on purpose — at the
      tropopause a card tinted in the sky's blue disappears into it. Per-card
@@ -1849,6 +1850,7 @@ a {
 }
 
 .rail {
+  position: relative;
   display: flex;
   gap: var(--rail-gap);
   overflow-x: auto;
@@ -1883,13 +1885,43 @@ a {
   cursor: grabbing;
 }
 
-.rail > .card {
+.rail > .card,
+.rail > .rail__divider {
   transform: translateX(calc((1 - var(--sweep)) * var(--i, 0) * 8vw));
   will-change: transform;
 }
 
-body.low-power .rail > .card {
+body.low-power .rail > .card,
+body.low-power .rail > .rail__divider {
   will-change: auto;
+}
+
+/* Group headings stretch with the cards without becoming snap targets. */
+.rail__divider {
+  flex: 0 0 var(--rail-divider-width);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-inline-start: 1px solid rgb(255 255 255 / 0.5);
+  scroll-snap-align: none;
+}
+
+.rail__divider + .card {
+  scroll-margin-inline-start: calc(var(--rail-divider-width) + var(--rail-gap));
+}
+
+.rail__divider-label {
+  margin: 0;
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  color: #f4f7fa;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .rail::-webkit-scrollbar {
@@ -2278,6 +2310,24 @@ body.low-power .rail > .card {
   flex: none;
   width: 14px;
   height: 14px;
+}
+
+/* Skills and link share one row; the link wraps under, still right-aligned. */
+.card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+}
+
+.card__foot .skills {
+  margin: 0;
+}
+
+.card__foot .card__link {
+  margin-left: auto;
+  font-size: 14px;
 }
 
 .card__link {
@@ -2817,6 +2867,7 @@ body.low-power .rail > .card {
     --trace-gap: 20px;
     --card-pad: 18px;
     --rail-fade: 64px;
+    --rail-divider-width: 44px;
   }
 
   .hero {
@@ -2903,6 +2954,10 @@ body.low-power .rail > .card {
     flex-direction: column;
     align-items: flex-start;
     padding-right: calc(var(--gutter) + var(--tape-w));
+  }
+
+  .rail__divider-label {
+    font-size: 17px;
   }
 
   .card--project {
@@ -3275,7 +3330,8 @@ body.low-power .rail > .card {
   }
 
   .station__body,
-  .rail > .card {
+  .rail > .card,
+  .rail > .rail__divider {
     transform: none;
   }
 

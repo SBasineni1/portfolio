@@ -9,7 +9,7 @@ export const site = {
     "I'm a computer science student at Cornell University minoring in atmospheric science, building full stack systems for climate and weather data.",
   ledes: {
     projects: 'Weather models, markets, and AI agents, turned into tools you can open and use.',
-    experience: 'From hurricane rainfall at NOAA to cloud data recovery at Commvault.',
+    experience: 'Internships at NOAA and Commvault, and two project teams at Cornell.',
     education: 'Pursuing a B.S. in Computer Science with a minor in Atmospheric Science at Cornell University.',
   },
 };
@@ -140,6 +140,7 @@ export const projects: Project[] = [
 ];
 
 export interface ExperienceEntry {
+  group: 'work' | 'club';
   role: string;
   org: string;
   dates: string;
@@ -156,8 +157,15 @@ export interface ExperienceEntry {
   location?: string;
 }
 
+// SAFETY: Preserve literal labels while checking that every experience group is covered.
+export const experienceGroups = {
+  work: 'Work',
+  club: 'Clubs',
+} as const satisfies Record<ExperienceEntry['group'], string>;
+
 export const experience: ExperienceEntry[] = [
   {
+    group: 'work',
     role: 'Software Engineering Intern',
     org: 'NOAA AOML',
     cover: asset('experience/noaa-aoml.webp'),
@@ -165,7 +173,7 @@ export const experience: ExperienceEntry[] = [
     dates: 'May 2026 — Aug 2026',
     location: 'Virginia Key, FL',
     summary:
-      'Built a config-driven Python framework that scores HAFS hurricane rainfall forecasts against radar observations across 20 landfalling storms. Parallelized it on HPC to save ~30 minutes per storm, and briefed 50 staff on active storm guidance.',
+      'Per-storm framework verifying HAFS rainfall forecasts against observational data',
     bullets: [
       'Built a configuration-based Python framework (xarray, NumPy, SciPy) that ingests HAFS hurricane model output, regrids it to radar observations, and scores rainfall accuracy across 20 landfalling storms.',
       'Parallelized scoring with worker pools and caching on the HPC, saving ~30 minutes per storm, and trained a SnapBoost model relating forecast cycle to accuracy across HAFS-A, HAFS-B, and HAFS-Multistorm.',
@@ -174,6 +182,7 @@ export const experience: ExperienceEntry[] = [
     tech: ['Python', 'Linux', 'SciPy', 'HPC'],
   },
   {
+    group: 'work',
     role: 'Software Engineering Intern',
     org: 'Commvault',
     cover: asset('experience/commvault.webp'),
@@ -181,7 +190,7 @@ export const experience: ExperienceEntry[] = [
     dates: 'Sep 2024 — Jan 2025',
     location: 'Tinton Falls, NJ',
     summary:
-      'Moved user credentials out of text files and into Commvault Cloud, restructuring SQL queries to cut runtime 30%. Built an automated data recovery workflow end to end, taking average recovery from 2 hours to 10 minutes.',
+      'Secure credential storage and automated data recovery workflows',
     bullets: [
       'Redesigned user credential workflows to store data securely in Commvault Cloud instead of text files, restructuring SQL queries to cut runtime by 30%.',
       'Built and owned an automated data recovery workflow end to end, reducing average recovery time from 2 hours to 10 minutes and eliminating ~15 customer support tickets weekly.',
@@ -189,15 +198,16 @@ export const experience: ExperienceEntry[] = [
     tech: ['SQL', 'Java'],
   },
   {
+    group: 'club',
     role: 'Team Lead',
     org: 'Cornell Data Journal',
     cover: asset('experience/data-journal.webp'),
     logo: asset('experience/logos/data-journal.png'),
-    link: { href: 'https://cornelldatajournal.org/articles/nuclear-waste', label: 'Read the article' },
+    link: { href: 'https://cornelldatajournal.org/articles/nuclear-waste', label: 'Read Articles' },
     dates: 'Sep 2025 — Present',
     location: 'Ithaca, NY',
     summary:
-      'Leading a team that built a full-stack app over ~200K NWS severe weather reports (2008–2025), mapping false alarm rates across 114 areas. Also ran a geospatial regression of ~90 U.S. nuclear waste sites against census income data, published with an interactive map.',
+      'Mapping nuclear waste sites and severe weather warning false alarm rates',
     bullets: [
       'Built a full-stack REST API web app that processes ~200K NWS severe weather reports (2008–2025) and maps false alarm rates in 114 areas.',
       'Led a geospatial regression analysis of ~90 U.S. nuclear waste sites against census income data, published with an interactive map.',
@@ -205,6 +215,7 @@ export const experience: ExperienceEntry[] = [
     tech: ['Python', 'HTML/CSS'],
   },
   {
+    group: 'club',
     role: 'Team Member',
     org: 'Cornell GeoData',
     cover: asset('experience/geodata.webp'),
@@ -212,7 +223,7 @@ export const experience: ExperienceEntry[] = [
     dates: 'Nov 2025 — Present',
     location: 'Ithaca, NY',
     summary:
-      'Built a modular Raspberry Pi logger that streams a 5-sensor water-quality probe on Cayuga Lake to a live dashboard, cutting data collection costs 75%. Now deploying it on a buoy, and helping build an ML pipeline that detects lake-effect snow.',
+      'Building a Cayuga Lake-effect snow ML model & building custom data loggers',
     bullets: [
       'Engineered a modular Raspberry Pi data-logging system that streams live sensor data to a dashboard and cut data collection costs 75%.',
       'Integrated a 5-sensor probe (turbidity, TDS, pressure, temperature, pH) to monitor Cayuga Lake for algal blooms, now deploying on a buoy.',

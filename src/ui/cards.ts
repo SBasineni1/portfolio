@@ -78,6 +78,13 @@ export function projectCard(project: Project, index: number): HTMLLIElement {
   return card;
 }
 
+export function groupDivider(label: string, index: number): HTMLLIElement {
+  const divider = el('li', 'rail__divider');
+  divider.style.setProperty('--i', String(index));
+  divider.append(el('h3', 'rail__divider-label', label));
+  return divider;
+}
+
 export function experienceCard(entry: ExperienceEntry, index: number): HTMLLIElement {
   const card = el('li', 'card card--exp');
   card.style.setProperty('--i', String(index));
@@ -112,16 +119,17 @@ export function experienceCard(entry: ExperienceEntry, index: number): HTMLLIEle
   }
   content.append(meta);
   content.append(el('h3', 'card__title', entry.role));
-  // A link reads on at the end of the description, as part of it.
-  const text = el('p', 'card__text', entry.summary);
+  content.append(el('p', 'card__text', entry.summary));
+  // Skills on the left, any link held to the far right of the same row.
+  const foot = el('div', 'card__foot');
+  if (entry.tech?.length) foot.append(skills(entry.tech));
   if (entry.link) {
     const link = anchor(entry.link.href, entry.link.label);
     link.className = 'card__link';
     link.append(icon('arrow'));
-    text.append(' ', link);
+    foot.append(link);
   }
-  content.append(text);
-  if (entry.tech?.length) content.append(skills(entry.tech));
+  if (foot.childElementCount) content.append(foot);
   card.append(content);
   return card;
 }

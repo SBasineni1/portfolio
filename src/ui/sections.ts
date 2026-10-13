@@ -1,6 +1,6 @@
-import { about, bands, contact, education, experience, projects, site, type Band } from '../content';
+import { about, bands, contact, education, experience, experienceGroups, projects, site, type Band } from '../content';
 import { progressForAltitude } from '../world/camera';
-import { educationSplit, experienceCard, projectCard } from './cards';
+import { educationSplit, experienceCard, groupDivider, projectCard } from './cards';
 import { el } from './dom';
 import { photoStack } from './photo-stack';
 import { mountRecoveryTag, type RecoveryTag } from './recovery-tag';
@@ -110,7 +110,11 @@ export class Sections {
     const expHost = document.querySelector<HTMLElement>('[data-experience]');
     if (expHost) {
       for (let i = 0; i < experience.length; i++) {
-        expHost.append(experienceCard(experience[i], i));
+        const entry = experience[i];
+        if (entry.group !== experience[i - 1]?.group) {
+          expHost.append(groupDivider(experienceGroups[entry.group], i));
+        }
+        expHost.append(experienceCard(entry, i));
       }
       const ruler = document.querySelector<HTMLElement>('[data-ruler="experience"]');
       this.relayouts.push(attachRail(expHost, ruler, this.reduced));

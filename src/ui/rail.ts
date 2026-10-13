@@ -9,8 +9,9 @@ export function attachRail(
   let startScrollLeft = 0;
   let pointerId = -1;
   let dragged = false;
-  let step = 1;
   let current = -1;
+  let maxScroll = 0;
+  const targets: number[] = [];
 
   const cards = rail.querySelectorAll<HTMLElement>(':scope > .card');
   const ticks: HTMLElement[] = [];
@@ -28,9 +29,23 @@ export function attachRail(
     ruler.append(count);
   }
 
+  const nearestCard = (): number => {
+    let nearest = 0;
+    let distance = Infinity;
+    const atEnd = Math.abs(rail.scrollLeft - maxScroll) <= 1;
+    for (let i = 0; i < targets.length; i++) {
+      const delta = Math.abs(targets[i] - rail.scrollLeft);
+      if (delta < distance || (atEnd && delta === distance)) {
+        nearest = i;
+        distance = delta;
+      }
+    }
+    return nearest;
+  };
+
   const updateRuler = (): void => {
     if (!count || cards.length === 0) return;
-    const next = Math.min(cards.length - 1, Math.max(0, Math.round(rail.scrollLeft / step)));
+    const next = nearestCard();
     if (next === current) return;
     if (current >= 0) ticks[current].classList.remove('is-current');
     current = next;
@@ -82,25 +97,28 @@ export function attachRail(
   rail.addEventListener('keydown', (event) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     const active = document.activeElement;
-    if (!active || !rail.contains(active)) return;
-    rail.scrollBy({
-      left: event.key === 'ArrowLeft' ? -step : step,
-      behavior: reduced() ? 'auto' : 'smooth',
-    });
+    if (!active || !rail.contains(active) || cards.length === 0) return;
+    const direction = event.key === 'ArrowLeft' ? -1 : 1;
     event.preventDefault();
+    for (let next = nearestCard() + direction; next >= 0 && next < targets.length; next += direction) {
+      if (Math.abs(targets[next] - rail.scrollLeft) <= 1) continue;
+      rail.scrollTo({
+        left: targets[next],
+        behavior: reduced() ? 'auto' : 'smooth',
+      });
+      break;
+    }
   });
   rail.addEventListener('scroll', updateRuler, { passive: true });
 
   return (): void => {
-    if (cards.length > 1) {
-      step = cards[1].offsetLeft - cards[0].offsetLeft;
+    maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    const padding = Number.parseFloat(getComputedStyle(rail).scrollPaddingInlineStart) || 0;
+    for (let i = 0; i < cards.length; i++) {
+      const margin = Number.parseFloat(getComputedStyle(cards[i]).scrollMarginInlineStart) || 0;
+      // The positioned rail is the offset parent, so entrance transforms don't affect targets.
+      targets[i] = Math.min(maxScroll, Math.max(0, cards[i].offsetLeft - padding - margin));
     }
-    if (step <= 0 || cards.length === 1) {
-      if (cards.length === 0) return;
-      const styles = getComputedStyle(rail);
-      step = cards[0].offsetWidth + Number.parseFloat(styles.columnGap || styles.gap) || 1;
-    }
-    if (step <= 0) step = 1;
     updateRuler();
   };
 }
