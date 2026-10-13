@@ -42,4 +42,5 @@ export const snowfield: LaunchSite = {
     sock: [318, -10],
   },
   cloud: { top: '#e9eef3', base: '#b9c6d4' },
+  weather: { base: 1100, odds: { flurries: 0.3, snow: 0.2 } },
 };

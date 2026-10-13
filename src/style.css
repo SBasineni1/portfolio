@@ -362,6 +362,215 @@ a {
   color: #0d0d0d;
 }
 
+/* Sandbox toggle: a ghost pill after the links, secondary to Contact. */
+.nav__sandbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 13px 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  font: 500 14px/1 var(--display);
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.nav__sandbox:hover,
+.nav__sandbox[aria-pressed='true'] {
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+
+.nav__sandbox svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -------------------------------------------------------------- tips ---
+   One-time pointers to the weather toggle and the sandbox (tips.ts): the
+   launch note's dark stock, smaller, placed beside what they point at. */
+
+.tip {
+  position: fixed;
+  z-index: 42;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 9px 10px;
+  /* Hugs its line of copy, so there is no dead column beside the text. */
+  width: max-content;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 11px 10px 12px 14px;
+  border-radius: 13px;
+  background: #0d0d0d;
+  color: #fff;
+  font-family: var(--display);
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.6);
+}
+
+.tip__text {
+  grid-column: 1;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.tip__line {
+  display: block;
+}
+
+.tip__close {
+  grid-column: 2;
+  grid-row: 1;
+  width: 20px;
+  height: 20px;
+  margin: -1px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font: 400 17px/1 var(--display);
+  cursor: pointer;
+}
+
+.tip__close:hover {
+  color: #fff;
+}
+
+.tip__action {
+  grid-column: 1;
+  justify-self: start;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #0d0d0d;
+  font: 600 13px/1 var(--display);
+  cursor: pointer;
+}
+
+.tip :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------- sandbox ---
+   The page steps aside: content, hero, launch note and section links fade
+   out while the scroll keeps flying the balloon, and the launch-site tag
+   stays live at any altitude. sandbox.ts. */
+
+#content,
+.skip,
+.toast {
+  transition: opacity 0.35s ease-out, visibility 0s linear 0s;
+}
+
+.is-sandbox #content,
+.is-sandbox .skip,
+.is-sandbox .toast {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s ease-out, visibility 0s linear 0.35s;
+}
+
+.is-sandbox .nav__list {
+  display: none;
+}
+
+.is-sandbox .site-picker {
+  opacity: var(--enter, 1);
+  /* Its lift above the launch note is inline; the note is gone here. */
+  bottom: 16px !important;
+}
+
+/* Controls, on the same tag stock as the launch-site picker. */
+.sandbox {
+  position: fixed;
+  right: calc(var(--tape-w) + 16px);
+  bottom: 16px;
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 10px 10px 18px;
+  border-radius: 10px;
+  background: #e6d6ae;
+  color: #16120b;
+  font-family: var(--display);
+  box-shadow: 0 1px 2px rgba(10, 16, 28, 0.2), 0 14px 30px -14px rgba(10, 18, 34, 0.55);
+}
+
+.sandbox[hidden] {
+  display: none;
+}
+
+.sandbox__title {
+  padding-right: 14px;
+  border-right: 1px solid rgba(22, 18, 11, 0.22);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.sandbox__action {
+  padding: 7px 12px;
+  border: 1px solid rgba(22, 18, 11, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: 500 13px/1 var(--display);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sandbox__action:hover {
+  background: rgba(22, 18, 11, 0.08);
+}
+
+.sandbox__action:active {
+  background: rgba(22, 18, 11, 0.16);
+}
+
+.sandbox__exit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #16120b;
+  color: #e6d6ae;
+  cursor: pointer;
+}
+
+.sandbox__exit svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.sandbox :focus-visible,
+.nav__sandbox:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ------------------------------------------------------------ layout --- */
 
 #content {
@@ -770,11 +979,27 @@ a {
   letter-spacing: 0;
 }
 
-.site-picker__name {
-  display: inline-block;
+/* Site name over its current weather, ruled off from the number. */
+.site-picker__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 118px;
   padding-left: 11px;
   border-left: 1.5px solid var(--tag-ink);
+}
+
+.site-picker__weather {
+  font-family: var(--display);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.15;
+  white-space: nowrap;
+  opacity: 0.72;
+}
+
+.site-picker__name {
+  display: inline-block;
   font-family: var(--display);
   font-size: 15px;
   font-weight: 650;
@@ -805,6 +1030,22 @@ a {
 .site-picker__step:hover {
   background: var(--tag-ink);
   color: var(--tag);
+}
+
+/* Weather on/off: the cloud fills in while weather is on. */
+.site-picker__toggle {
+  margin-right: 4px;
+}
+
+.site-picker__toggle[aria-pressed='true'] {
+  background: var(--tag-ink);
+  color: var(--tag);
+}
+
+.site-picker__step.site-picker__toggle svg {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .site-picker__step svg {
@@ -1112,38 +1353,18 @@ a {
    ink family — a caption, not a coloured instrument readout. */
 .panel__band {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0 10px;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   font-family: var(--display);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.3;
-  letter-spacing: 0;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--ink-2);
 }
 
-.panel__index {
-  color: var(--ink);
-  font-weight: 650;
-}
-
-/* A short rule between the number and the caption, in place of punctuation. */
-.panel__index::after {
-  content: '';
-  display: inline-block;
-  width: 18px;
-  height: 1px;
-  margin-left: 10px;
-  vertical-align: 0.3em;
-  background: var(--hair-strong);
-}
-
-.panel__range::before {
-  content: '·';
-  margin-right: 10px;
+/* The layer of sky this section flies through, set as a marker. */
+.panel__layer {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* The section title: large, sentence case, set solid. */
@@ -1209,11 +1430,140 @@ a {
   color: var(--ink);
 }
 
-.panel__foot {
-  margin: 26px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ink-3);
+/* ------------------------------------------------------------- snaps ---
+   The About photos: a stack of full-bleed photo cards, thrown into the wind
+   by photo-stack.ts. On desktop the stack stands in the open sky between the
+   balloon and the altitude tape, centred on the About copy. They are objects
+   in the scene, like the hero Polaroid, so they may carry a drop shadow. */
+
+.snaps {
+  /* Most of the sky between the balloon (centred, ~80px half-width) and the
+     tape, leaving air around it. */
+  --snap-w: clamp(220px, calc((50vw - var(--tape-w) - 136px) * 0.84), 420px);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Centred in that gap. The panel's box starts at the gutter. */
+  left: calc(75vw + 40px - var(--tape-w) / 2 - var(--snap-w) / 2 - var(--gutter));
+  width: var(--snap-w);
+  /* Centred on the copy by flex, not a translate: the reveals own transform. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  pointer-events: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.snaps__deck {
+  position: relative;
+  pointer-events: auto;
+  aspect-ratio: 4 / 3;
+  container-type: inline-size;
+}
+
+.snap {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--card-radius);
+  background: #2b2d31;
+  /* Edged in the sky behind it, a touch lighter (main.ts → --sky-tone, per
+     launch site), so the stack reads as cut from the scene it sits in. */
+  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--sky-tone, rgb(150, 180, 215)) 78%, white),
+    0 1px 1.5px rgba(10, 16, 28, 0.22), 0 16px 34px -14px rgba(10, 18, 34, 0.55);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+}
+
+.snap.is-top {
+  pointer-events: auto;
+  cursor: grab;
+  /* Sideways drags throw; vertical ones still scroll the page on touch. */
+  touch-action: pan-y;
+}
+
+.snaps.is-dragging .snap.is-top {
+  cursor: grabbing;
+}
+
+.snap__photo {
+  position: absolute;
+  inset: 0;
+}
+
+.snap__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Over a scrim along the bottom edge, shown while the top card is pointed at. */
+.snap__caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 36px 18px 14px;
+  background: linear-gradient(180deg, transparent, rgba(6, 10, 18, 0.72));
+  font-family: var(--display);
+  font-size: max(13px, 3.4cqw);
+  font-weight: 500;
+  line-height: 1.3;
+  color: #f4f7fa;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+
+.snap.is-top:hover .snap__caption,
+.snaps.is-keyed:focus-visible .snap.is-top .snap__caption {
+  opacity: 1;
+  transform: none;
+}
+
+.snaps.is-keyed:focus-visible .snap.is-top {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+
+/* How hard the last card was thrown: bare type on the scene. photo-stack.ts
+   reads the sky and terrain behind it and flips the ink to contrast. */
+.snaps__readout {
+  /* Clear of the fanned cards' lowest corners. */
+  margin: 44px 0 0;
+  font-family: var(--display);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  transition: color 0.4s ease-out, text-shadow 0.4s ease-out;
+}
+
+.snaps[data-backdrop='light'] .snaps__readout {
+  color: #0a1420;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.55);
+}
+
+.snaps[data-backdrop='dark'] .snaps__readout {
+  color: #f4f7fa;
+  text-shadow: 0 1px 8px rgba(2, 6, 12, 0.55);
+}
+
+.snaps__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ----------------------------------------------------------- entries --- */
@@ -1300,65 +1650,6 @@ a {
   background: var(--flare);
 }
 
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 9px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--data);
-  font-stretch: 76%;
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
-.tags li + li::before {
-  content: '· ';
-}
-
-.entry__links {
-  display: flex;
-  gap: 18px;
-  margin: 12px 0 0;
-}
-
-/* Links are bracketed, not underlined. A hairline frame snaps around the
-   hit area on hover -- the way a reading gets boxed on an instrument panel --
-   instead of an accent rule under the text. This keeps --flare rationed (see
-   DESIGN.md section 2) and keeps the chrome layer free of any fill or border
-   at rest. The frame is a ::before so it never affects layout. */
-.entry__links a {
-  position: relative;
-  display: inline-block;
-  padding: 2px 6px;
-  margin: -2px -6px;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.entry__links a::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  /* Visible-but-quiet at rest. The reference leaves this fully transparent, but
-     its links are nav items in fixed positions; these sit inside prose, where an
-     invisible affordance is just unmarked text. A hairline reads as a bracket
-     waiting to close, and still costs nothing visually. Documented deviation. */
-  border: 1px solid var(--hair);
-  border-radius: 0;
-  transition: border-color 0.3s cubic-bezier(0, 0, 0.2, 1);
-}
-
-.entry__links a:hover::before {
-  border-color: var(--ink);
-}
-
 /* No focus rule needed here: the global :focus-visible above already draws a
    --flare ring, and the bracket frame is bound to :hover, so the two never
    stack. (The reference site shipped no visible focus state at all; that part
@@ -1366,52 +1657,158 @@ a {
 
 /* Contact: full-width rows between hairlines. The whole row is the link;
    the arrow steps out on hover. */
-.links {
-  display: grid;
-  margin: 22px 0 0;
+/* ---------------------------------------------------------- recovery ---
+   Contact as a radiosonde recovery tag (recovery-tag.ts): the launch-site
+   tag's stock and ink, chamfered and punched at the end nearest the payload,
+   which main.ts ties to the payload with a drawn string. */
+
+.recovery {
+  --tag: #e6d6ae;
+  --tag-ink: #16120b;
+  position: relative;
+  margin: 26px 0 0;
+  padding: 18px 54px 14px 20px;
+  border-radius: 6px 0 0 6px;
+  background: var(--tag);
+  color: var(--tag-ink);
+  font-family: var(--display);
+  /* Chamfered end and the punched hole the string runs through. */
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%);
+  -webkit-mask: radial-gradient(circle 5px at calc(100% - 24px) 50%, transparent 97%, #000 100%);
+  mask: radial-gradient(circle 5px at calc(100% - 24px) 50%, transparent 97%, #000 100%);
+}
+
+/* The brass reinforcement ring around the hole. */
+.recovery__hole {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #b59a5e;
+  border-radius: 50%;
+  translate: 50% -50%;
+}
+
+/* The instrument's warning line, over the request below it. */
+.recovery__warning {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.recovery__ask {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.recovery__rows {
+  margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--hair);
+  border-top: 1.5px dashed rgba(22, 18, 11, 0.32);
 }
 
-.links li {
-  border-bottom: 1px solid var(--hair);
-}
-
-.links__row {
+.recovery__row {
   display: grid;
-  grid-template-columns: 112px 1fr auto;
+  grid-template-columns: 96px 1fr;
   align-items: baseline;
-  gap: 16px;
-  margin: 0;
-  padding: 14px 0;
-  color: var(--ink);
-  text-decoration: none;
+  gap: 12px;
+  padding: 9px 0;
 }
 
-.links__key {
+.recovery__row + .recovery__row {
+  border-top: 1px dashed rgba(22, 18, 11, 0.22);
+}
+
+.recovery__key {
   font-size: 13px;
   font-weight: 500;
-  color: var(--ink-3);
+  opacity: 0.62;
 }
 
-.links__value {
-  font-size: 17px;
-  font-weight: 550;
+.recovery__value {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 600 16px/1.3 var(--display);
   letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
-.links__arrow {
-  font-size: 15px;
-  color: var(--ink-3);
-  transition: transform 0.3s cubic-bezier(0, 0, 0.2, 1), color 0.3s cubic-bezier(0, 0, 0.2, 1);
+.recovery__value:hover > span:first-child,
+.recovery__value:focus-visible > span:first-child {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
 }
 
-.links__row:hover .links__arrow,
-.links__row:focus-visible .links__arrow {
-  color: var(--ink);
-  transform: translate(3px, -3px);
+.recovery__value:focus-visible {
+  outline: 2px solid var(--tag-ink);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.recovery__hint {
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.55;
+}
+
+/* RECOVERED, inked on at an angle when the email is copied. The angle is the
+   individual rotate property, so GSAP's scale composes with it. */
+.recovery__stamp {
+  position: absolute;
+  top: 14px;
+  right: 66px;
+  display: grid;
+  justify-items: center;
+  padding: 5px 12px 6px;
+  border: 2.5px solid #a3322a;
+  border-radius: 6px;
+  color: #a3322a;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  rotate: -9deg;
+  opacity: 0;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.recovery__stamp strong {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.recovery__stamp span {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.recovery__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ------------------------------------------------ stations & cards ---
@@ -1475,6 +1872,12 @@ a {
   );
 }
 
+/* A link in a card would otherwise start the browser's own link drag
+   instead of moving the rail. */
+.rail a {
+  -webkit-user-drag: none;
+}
+
 .rail.is-dragging {
   scroll-snap-type: none;
   cursor: grabbing;
@@ -1528,10 +1931,11 @@ body.low-power .rail > .card {
   flex-direction: column;
   width: clamp(300px, 58vw, 860px);
   height: clamp(340px, 55vh, 540px);
+  border: 0;
 }
 
-/* Label row: filing index, title, year — the rauno "label above the cover".
-   The cover repeats the title at display size, deliberately. */
+/* Label row: the title, above the cover the way a plate is captioned. The
+   cover repeats it at display size, deliberately. */
 .card__label {
   display: flex;
   align-items: baseline;
@@ -1540,34 +1944,22 @@ body.low-power .rail > .card {
   padding: var(--card-pad) var(--card-pad) 14px;
 }
 
-.card__index,
-.card__year {
-  flex: none;
-  font-family: var(--data);
-  font-stretch: 78%;
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.card__year {
-  margin-left: auto;
-}
-
 .card__cover {
   overflow: hidden;
 }
 
+/* The cover: near-white stock with a trace of the project's accent, the
+   name set huge along its lower edge. Space kept for a picture. */
 .card--project > .card__cover {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  /* The approved per-card tint: the cover stock takes a trace of the
-     project's accent, so each specimen sheet has its own temperature. */
   background: color-mix(in oklab, #ffffff 92%, var(--accent));
+}
+
+.card--project > .card__cover img {
+  position: absolute;
+  inset: 0;
 }
 
 .card__cover img,
@@ -1575,10 +1967,6 @@ body.low-power .rail > .card {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.card__cover--type {
-  min-height: 112px;
 }
 
 .card__big {
@@ -1597,6 +1985,8 @@ body.low-power .rail > .card {
 
 .card__body {
   flex: none;
+  display: flex;
+  flex-direction: column;
   padding: 18px var(--card-pad) var(--card-pad);
 }
 
@@ -1616,12 +2006,87 @@ body.low-power .rail > .card {
   color: var(--ink-2);
 }
 
-.card__body .card__text + .tags {
-  margin-top: 12px;
+.card--project .card__title {
+  font-size: 17px;
+  font-weight: 600;
 }
 
-.card__body .entry__links {
-  margin-top: 16px;
+.card--project .card__text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--card-ink) 86%, transparent);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  padding: 6px 11px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  color: var(--ink);
+  font: 500 13px/1 var(--display);
+}
+
+/* Pills, as in the nav: a solid ink one to go and see the thing, a hairline
+   one for its source. */
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid var(--hair-strong);
+  border-radius: 999px;
+  font: 500 14px/1 var(--display);
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.button svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.button--ghost {
+  color: var(--ink);
+}
+
+.button--ghost:hover {
+  border-color: var(--ink);
+}
+
+.button--solid {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card-paper);
+}
+
+.button--solid:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* The experience card is the tinted photo ground of the reference: white ink
@@ -1634,8 +2099,16 @@ body.low-power .rail > .card {
   --hair: color-mix(in srgb, #f4f7fa 24%, transparent);
   --hair-strong: color-mix(in srgb, #f4f7fa 52%, transparent);
   width: clamp(272px, 30vw, 432px);
-  height: clamp(340px, 55vh, 540px);
+  min-height: clamp(340px, 55vh, 540px);
   color: var(--ink);
+  /* Org row at the top, copy at the bottom, both in flow: a card with more
+     to say grows taller (the rail evens its neighbours) instead of letting
+     the copy climb into the logo. */
+  display: flex;
+  flex-direction: column;
+  padding: var(--card-pad);
+  /* The photograph is its own edge. */
+  border: 0;
 }
 
 .card--exp > .card__cover,
@@ -1660,46 +2133,108 @@ body.low-power .rail > .card {
   opacity: 0.9;
 }
 
-.card--exp:not(:has(img)) .card__tint {
+.card--exp:not(:has(> .card__cover)) .card__tint {
   opacity: 1;
 }
 
-.card__logo {
-  position: absolute;
-  top: var(--card-pad);
-  left: var(--card-pad);
-  max-height: 28px;
-  font: 500 9.5px/1 var(--data);
-  font-stretch: 78%;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+/* Over a cover the tint steps aside: a little shade at the top edge for the
+   org name, and the ground under the copy is the copy's own (below), so it
+   rises exactly as high as the text does on any card size. */
+.card--exp:has(> .card__cover) .card__tint {
+  opacity: 1;
+  background: linear-gradient(to bottom, rgb(4 10 20 / 0.6) 0%, transparent 24%);
 }
 
-.card__logo img {
+.card--exp:has(> .card__cover) .card__content {
+  isolation: isolate;
+}
+
+.card--exp:has(> .card__cover) .card__content::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -68px calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));
+  background: linear-gradient(
+    to top,
+    rgb(4 10 20 / 0.9) calc(100% - 120px),
+    rgb(4 10 20 / 0.4) calc(100% - 56px),
+    transparent 100%
+  );
+}
+
+/* The org: its mark on a small white tile (logos are drawn for white
+   paper, and a tile lets any of them sit on any photograph), then its name. */
+.card__logo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 600 15px/1.2 var(--display);
+  color: var(--ink);
+  text-shadow: 0 1px 8px rgb(4 10 20 / 0.55);
+}
+
+.card__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgb(4 10 20 / 0.28);
+}
+
+.card__mark img {
   display: block;
-  width: auto;
-  max-width: min(180px, 55%);
-  height: 28px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  object-position: left center;
+}
+
+/* Phone cards are nearly all copy: a smaller tile keeps clear of it. */
+@media (max-width: 900px) {
+  .card__logo {
+    gap: 10px;
+  }
+
+  .card__mark {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+    border-radius: 8px;
+  }
 }
 
 .card__content {
-  position: absolute;
-  left: var(--card-pad);
-  right: var(--card-pad);
-  bottom: var(--card-pad);
+  position: relative;
+  margin-top: auto;
+  padding-top: 28px;
 }
 
-.card__eyebrow {
-  margin: 0 0 8px;
-  font-family: var(--data);
-  font-stretch: 78%;
-  font-size: 9.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+/* When and where, each behind its own small icon instead of a separator. */
+.card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 10px;
+  font: 500 14px/1.35 var(--display);
+  color: var(--ink);
+}
+
+.card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card__meta svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
 }
 
 .card--exp .card__title {
@@ -1717,13 +2252,62 @@ body.low-power .rail > .card {
   line-height: 1.55;
 }
 
-.card--exp .tags {
-  margin-top: 14px;
+/* Skills: each behind its logo (or a symbol for the idea), on a faint chip. */
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skills li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  font: 500 12.5px/1 var(--display);
+  color: var(--ink);
+}
+
+.skills svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.card__link {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgb(255 255 255 / 0.45);
+  transition: text-decoration-color 0.2s ease;
+}
+
+.card__link:hover,
+.card__link:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+.card__link svg {
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 2px;
+  vertical-align: -0.05em;
 }
 
 .edu {
   display: grid;
   grid-template-columns: 40fr 60fr;
+  /* The card's row hugs the card; the photo's extra height goes below. */
+  grid-template-rows: auto 1fr;
   gap: var(--rail-gap);
   /* The cover is sized by its own ratio and the text card by its content —
      the reference's uneven pair, not two stretched boxes of dead space. */
@@ -1737,8 +2321,10 @@ body.low-power .rail > .card {
 
 .edu__cover {
   position: relative;
+  /* Beside both the card and the school line under it. */
+  grid-row: span 2;
   overflow: hidden;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1;
   border-radius: var(--card-radius);
   background:
     linear-gradient(
@@ -1766,10 +2352,191 @@ body.low-power .rail > .card {
   opacity: 0.16;
 }
 
+/* ---------------------------------------------------------- carousel ---
+   The Education photographs (carousel.ts): frames side by side on a track
+   that slides one frame at a time. Title top left, caption bottom left; the
+   arrows and dots wait out of sight until the visitor reaches for them. */
+
+.carousel {
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.carousel__track {
+  display: flex;
+  height: 100%;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+}
+
+.carousel.is-dragging .carousel__track {
+  cursor: grabbing;
+}
+
+.carousel__track.is-moving {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.carousel__frame {
+  flex: 0 0 100%;
+  height: 100%;
+}
+
+.carousel__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+/* Title and caption each sit on their own soft scrim at the edge they use. */
+.carousel__title,
+.carousel__caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0;
+  color: #f4f7fa;
+  pointer-events: none;
+}
+
+.carousel__title {
+  top: 0;
+  padding: 18px 22px 44px;
+  background: linear-gradient(0deg, transparent, rgba(6, 10, 18, 0.5));
+  font-family: var(--display);
+  font-size: clamp(16px, 1.4vw, 20px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.carousel__caption {
+  bottom: 0;
+  padding: 44px 22px 18px;
+  background: linear-gradient(180deg, transparent, rgba(6, 10, 18, 0.6));
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.carousel__caption[hidden] {
+  display: none;
+}
+
+/* Make room for the dots while they are up. */
+.carousel__caption {
+  transition: padding-bottom 0.25s ease;
+}
+
+.carousel:hover .carousel__caption,
+.carousel:focus-within .carousel__caption,
+.carousel.is-touched .carousel__caption {
+  padding-bottom: 34px;
+}
+
+/* Controls: out of the photo until hover, focus or a touch brings them up. */
+.carousel__arrow,
+.carousel__dots {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.carousel:hover .carousel__arrow,
+.carousel:hover .carousel__dots,
+.carousel:focus-within .carousel__arrow,
+.carousel:focus-within .carousel__dots,
+.carousel.is-touched .carousel__dots {
+  opacity: 1;
+}
+
+.carousel__arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(244, 247, 250, 0.86);
+  color: #0a1420;
+  cursor: pointer;
+  translate: 0 -50%;
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.5);
+}
+
+.carousel__arrow--prev {
+  left: 12px;
+}
+
+.carousel__arrow--next {
+  right: 12px;
+}
+
+.carousel__arrow svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.carousel__dots {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  display: flex;
+  translate: -50% 0;
+}
+
+/* A 22px target around a small mark; the current photo's mark is a pill. */
+.carousel__dot {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.carousel__dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.carousel__dot[aria-current]::before {
+  width: 16px;
+  background: #fff;
+}
+
+.carousel :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Touch screens swipe; the arrows are for pointers that can hover. */
+@media (hover: none) {
+  .carousel__arrow {
+    display: none;
+  }
+}
+
 .edu__card {
-  border: 1px solid var(--hair);
   border-radius: var(--card-radius);
-  padding: 28px;
+  padding: clamp(24px, 2.6vw, 40px);
 }
 
 .edu__head {
@@ -1777,17 +2544,26 @@ body.low-power .rail > .card {
   justify-content: space-between;
   align-items: baseline;
   gap: 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--hair);
 }
 
 .edu__head h3,
 .edu__row h3 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 650;
+  font-size: clamp(22px, 1.9vw, 28px);
+  font-weight: 600;
   line-height: 1.15;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+}
+
+/* Where the school is: in the section's accent, set like the copy. */
+.edu__head .edu__location {
+  font-family: var(--display);
+  font-stretch: normal;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
 }
 
 .edu__location,
@@ -1803,46 +2579,60 @@ body.low-power .rail > .card {
 }
 
 .edu__degree {
-  margin: 14px 0 0;
-  font-size: 15px;
-  font-weight: 550;
+  margin: 22px 0 0;
+  font-size: 17px;
+  font-weight: 450;
   line-height: 1.5;
-  letter-spacing: -0.011em;
-}
-
-.edu__text {
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 1.7;
   letter-spacing: -0.011em;
   color: var(--ink-2);
 }
 
-.edu__card > .tags {
-  margin-top: 16px;
+.edu__text {
+  margin: 18px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  letter-spacing: -0.011em;
+  color: var(--ink-2);
 }
 
-.edu__card > .edu__dates {
-  display: block;
-  margin-top: 20px;
-  padding-top: 14px;
-  border-top: 1px solid var(--hair);
+.edu__degree + .edu__minor {
+  margin-top: 0;
+  font-size: 15px;
 }
 
+.edu__subhead {
+  margin: 22px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.011em;
+}
+
+.edu__subhead + .edu__text {
+  margin-top: 4px;
+}
+
+/* Earlier schools: one line each under the card, inset to the card's text. */
 .edu__row {
-  grid-column: 1 / -1;
+  grid-column: 2;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 16px;
-  padding: 16px 0;
-  border-top: 1px solid var(--hair);
+  padding: 6px clamp(24px, 2.6vw, 40px) 0;
 }
 
 .edu__row h3 {
+  font-size: clamp(19px, 1.6vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.edu__where {
   font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
 }
 
 .edu__row .edu__degree {
@@ -2050,6 +2840,60 @@ body.low-power .rail > .card {
     filter: blur(30px);
   }
 
+  /* The full About copy outgrows a phone screen, and the panel fades by
+     scroll distance, so phones keep the lede, the photos and the facts. */
+  #about .panel__body > p:not(.panel__lede) {
+    display: none;
+  }
+
+  .snaps {
+    --snap-w: min(100%, 250px);
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    margin: 24px 0 8px;
+  }
+
+  .snaps__readout {
+    margin-top: 32px;
+  }
+
+  /* On a phone the tag takes the panel's width; the row label sits over its value. */
+  .recovery {
+    padding: 14px 40px 10px 16px;
+  }
+
+  .recovery__warning {
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  .recovery__ask {
+    font-size: 16px;
+  }
+
+  .recovery__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
+    padding: 7px 0;
+  }
+
+  .recovery__value {
+    font-size: 13.5px;
+  }
+
+  /* Each address is the whole row on a phone; the arrows would only crowd it. */
+  .recovery__hint {
+    display: none;
+  }
+
+  .recovery__stamp {
+    top: auto;
+    right: 46px;
+    bottom: 16px;
+  }
+
   .station {
     right: 0;
     padding-left: var(--gutter);
@@ -2062,18 +2906,102 @@ body.low-power .rail > .card {
   }
 
   .card--project {
-    width: 78vw;
-    height: clamp(300px, 46vh, 420px);
+    width: 80vw;
+    height: auto;
+  }
+
+  .card--project > .card__cover {
+    flex: none;
+    height: 150px;
+  }
+
+  .card--project > .card__body {
+    flex: 1 1 auto;
   }
 
   .card--exp {
     width: 70vw;
-    height: clamp(300px, 46vh, 420px);
+    min-height: clamp(300px, 46vh, 420px);
+    --card-pad: 18px;
   }
 
   .edu {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    gap: 12px;
     padding-right: calc(var(--gutter) + var(--tape-w));
+  }
+
+  /* One column on a phone: a wide strip of photo over a tighter card, so the
+     whole school fits on one screen. */
+  .edu__cover {
+    grid-row: auto;
+    aspect-ratio: 5 / 2;
+  }
+
+  .edu__card {
+    padding: 18px 20px 20px;
+  }
+
+  .edu__head {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .edu__head h3 {
+    font-size: 21px;
+  }
+
+  .edu__head .edu__location {
+    font-size: 13.5px;
+  }
+
+  .edu__row {
+    grid-column: 1;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 20px;
+  }
+
+  .edu__row h3 {
+    font-size: 17px;
+  }
+
+  .edu__where {
+    font-size: 13.5px;
+  }
+
+  .carousel__title {
+    padding: 12px 16px 30px;
+  }
+
+  .carousel__caption {
+    padding: 30px 16px 12px;
+    font-size: 13px;
+  }
+
+  .edu__degree {
+    margin-top: 10px;
+    font-size: 15px;
+  }
+
+  .edu__text {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .edu__subhead {
+    margin-top: 12px;
+    font-size: 13.5px;
+  }
+
+  .edu__subhead + .edu__text {
+    margin-top: 2px;
+  }
+
+  .edu__degree + .edu__minor {
+    font-size: 13.5px;
   }
 
   .alt {
@@ -2125,7 +3053,7 @@ body.low-power .rail > .card {
   }
 
   .nav {
-    gap: 16px;
+    gap: 12px;
     padding: 8px 10px;
   }
 
@@ -2134,7 +3062,7 @@ body.low-power .rail > .card {
   }
 
   .nav__list {
-    gap: 14px;
+    gap: 11px;
   }
 
   .nav__item {
@@ -2143,6 +3071,30 @@ body.low-power .rail > .card {
 
   .nav__item--cta {
     padding: 6px 12px;
+  }
+
+  .nav__sandbox {
+    padding: 6px;
+  }
+
+  .nav__sandbox-label {
+    display: none;
+  }
+
+  .sandbox {
+    right: 10px;
+    left: 10px;
+    bottom: 10px;
+    gap: 8px;
+    padding: 10px 10px 10px 14px;
+  }
+
+  .sandbox__exit {
+    margin-left: auto;
+  }
+
+  .is-sandbox .site-picker {
+    bottom: 74px !important;
   }
 
   /* Hero: the print sits top-right beside the name, and the tagline runs
@@ -2188,39 +3140,15 @@ body.low-power .rail > .card {
 
   /* Cover titles wrap instead of bleeding off a narrow card. */
   .card__big {
-    font-size: 13vw;
+    font-size: 11vw;
     line-height: 0.92;
     white-space: normal;
-  }
-
-  /* Contact rows stack the label over the value, so addresses never break mid-word. */
-  .links__row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'key arrow'
-      'value arrow';
-    row-gap: 3px;
-  }
-
-  .links__key {
-    grid-area: key;
-  }
-
-  .links__value {
-    grid-area: value;
-    font-size: 16px;
-  }
-
-  .links__arrow {
-    grid-area: arrow;
-    align-self: center;
   }
 
   .facts__row {
     grid-template-columns: 88px 1fr;
     gap: 12px;
   }
-
 
   .site-picker {
     left: 10px;
@@ -2263,7 +3191,45 @@ body.low-power .rail > .card {
    The reveal stays — it is a fade tied to scroll position, not motion — but
    nothing translates or draws itself. */
 
+/* The narrowest phones: the nav carries five controls, so it tightens a step. */
+@media (max-width: 400px) {
+  .nav {
+    gap: 9px;
+    padding: 7px 8px;
+  }
+
+  .nav__list {
+    gap: 9px;
+  }
+
+  .nav__item {
+    font-size: 11.5px;
+  }
+
+  .nav__item--cta {
+    padding: 5px 10px;
+  }
+
+  .nav__sandbox {
+    padding: 5px;
+  }
+
+  .sandbox {
+    gap: 6px;
+    padding-left: 12px;
+  }
+
+  .sandbox__title {
+    padding-right: 10px;
+  }
+
+  .sandbox__action {
+    padding: 7px 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+
   .profile__rotator,
   .profile__face--back {
     transform: none;

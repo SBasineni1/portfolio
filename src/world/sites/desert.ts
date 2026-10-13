@@ -44,4 +44,6 @@ export const desert: LaunchSite = {
     sock: [272, -6],
   },
   cloud: { top: '#efe7dc', base: '#c9b8a4' },
+  // Dry, but now and then a monsoon thunderstorm rolls through.
+  weather: { base: 1100, odds: { storm: 0.08 } },
 };

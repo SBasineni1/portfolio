@@ -59,14 +59,23 @@ export function attachRail(
     startX = event.clientX;
     startScrollLeft = rail.scrollLeft;
     dragged = false;
-    rail.setPointerCapture(pointerId);
-    rail.classList.add('is-dragging');
   });
   rail.addEventListener('pointermove', (event) => {
     if (event.pointerId !== pointerId) return;
+    // Released outside the rail before it became a drag: forget the press.
+    if ((event.buttons & 1) === 0) {
+      pointerId = -1;
+      return;
+    }
     const delta = event.clientX - startX;
-    if (Math.abs(delta) > DRAG_THRESHOLD) dragged = true;
-    rail.scrollLeft = startScrollLeft - delta;
+    // Only a real drag takes the pointer: capturing on press would send
+    // every click to the rail, and links inside the cards would never open.
+    if (!dragged && Math.abs(delta) > DRAG_THRESHOLD) {
+      dragged = true;
+      rail.setPointerCapture(pointerId);
+      rail.classList.add('is-dragging');
+    }
+    if (dragged) rail.scrollLeft = startScrollLeft - delta;
   });
   rail.addEventListener('pointerup', endDrag);
   rail.addEventListener('pointercancel', endDrag);

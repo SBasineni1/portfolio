@@ -82,12 +82,8 @@
       <section class="panel panel--left panel--contact" id="contact" aria-labelledby="contact-title">
         <p class="panel__band" data-band="contact"></p>
         <h2 class="panel__title" id="contact-title">Contact</h2>
-        <p class="panel__lede">
-          Burst altitude. The envelope is gone, the parachute is out, and the payload is on its
-          way down with everything it recorded.
-        </p>
-        <ul class="links" data-contact></ul>
-        <p class="panel__foot">Recovered by <span data-name>Suchit Basineni</span> · built from scratch with Canvas and Verlet physics.</p>
+        <p class="panel__lede">I'm always happy to chat about anything — just reach out to me on any platform!</p>
+        <div data-contact></div>
       </section>
     </main>
 
@@ -95,9 +91,15 @@
       <span class="site-picker__hole" aria-hidden="true"></span>
       <p class="site-picker__readout">
         <span class="site-picker__no"><span data-site-count></span><span class="site-picker__of" data-site-total></span></span>
-        <span class="site-picker__name" data-site-name aria-live="polite"></span>
+        <span class="site-picker__label">
+          <span class="site-picker__name" data-site-name aria-live="polite"></span>
+          <span class="site-picker__weather" data-site-weather aria-live="polite"></span>
+        </span>
       </p>
       <span class="site-picker__steps">
+        <button class="site-picker__step site-picker__toggle" type="button" data-site-weather-toggle aria-pressed="false" aria-label="Weather">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.6 10.2h6.6a2.6 2.6 0 0 0 .3-5.2 3.6 3.6 0 0 0-6.9.9 2.2 2.2 0 0 0 0 4.3z"/><path d="M6 12.4l-.6 1.4M9 12.4l-.6 1.4"/></svg>
+        </button>
         <button class="site-picker__step" type="button" data-site-prev aria-label="Previous launch site">
           <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>
         </button>

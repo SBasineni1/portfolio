@@ -20,6 +20,8 @@ interface SectionParts {
   titles: SplitText[];
   lines: SplitText[];
   links: HTMLElement[];
+  /** Objects that sit in the head, like the About photo stack: hidden means gone, not just clear. */
+  objects: HTMLElement[];
   cards: HTMLElement[][];
   shown: Record<RevealPart, boolean>;
   timeline: Partial<Record<RevealPart, gsap.core.Timeline>>;
@@ -43,6 +45,7 @@ export class Reveals {
       titles: [],
       lines: [],
       links: [...section.querySelectorAll<HTMLElement>('.links li, .facts__row')],
+      objects: [...section.querySelectorAll<HTMLElement>('.snaps, .recovery')],
       cards: [...section.querySelectorAll<HTMLElement>('.card, .edu')].map((card) => [
         ...card.querySelectorAll<HTMLElement>(CARD_PIECES),
       ]),
@@ -84,6 +87,7 @@ export class Reveals {
       );
     }
     gsap.set(parts.links, { y: 12, opacity: 0 });
+    gsap.set(parts.objects, { y: 22, autoAlpha: 0 });
     for (const pieces of parts.cards) gsap.set(pieces, { y: 22, opacity: 0 });
     this.sections.set(section, parts);
   }
@@ -99,11 +103,11 @@ export class Reveals {
     parts.shown[part] = shown;
     parts.timeline[part]?.kill();
     parts.timeline[part] = undefined;
-    if (!shown) {
-      this.hide(parts, part);
-      return;
-    }
-    parts.timeline[part] = part === 'head' ? this.playHead(parts) : this.playBody(parts);
+    parts.timeline[part] = shown
+      ? part === 'head'
+        ? this.playHead(parts)
+        : this.playBody(parts)
+      : this.hide(parts, part);
   }
 
   private playHead(parts: SectionParts): gsap.core.Timeline {
@@ -115,6 +119,7 @@ export class Reveals {
     tl.to(titleChars, { yPercent: 0, duration: 0.7, stagger: 0.024, ease: EASE_OUT }, 0.08);
     tl.to(lines, { yPercent: 0, duration: 0.85, stagger: 0.07, ease: EASE_OUT }, 0.28);
     tl.to(parts.links, { y: 0, opacity: 1, duration: 0.6, stagger: 0.07, ease: EASE_SETTLE }, 0.45);
+    tl.to(parts.objects, { y: 0, autoAlpha: 1, duration: 0.8, ease: EASE_SETTLE }, 0.3);
     return tl;
   }
 
@@ -126,15 +131,22 @@ export class Reveals {
     return tl;
   }
 
-  /** Reset out of sight: the section has already faded, so this is never seen. */
-  private hide(parts: SectionParts, part: RevealPart): void {
+  /**
+   * Reset for the next arrival. Usually the section has already faded, so
+   * this is never seen; About resets while still faintly in at the pad, so
+   * the copy drops back into its masks rather than blinking out.
+   */
+  private hide(parts: SectionParts, part: RevealPart): gsap.core.Timeline {
+    const tl = gsap.timeline({ defaults: { duration: 0.3, ease: 'power2.in' } });
     if (part === 'body') {
-      for (const pieces of parts.cards) gsap.set(pieces, { y: 22, opacity: 0 });
-      return;
+      for (const pieces of parts.cards) tl.to(pieces, { y: 22, opacity: 0 }, 0);
+      return tl;
     }
-    gsap.set(parts.bands.flatMap((split) => split.chars), { opacity: 0 });
-    gsap.set(parts.titles.flatMap((split) => split.chars), { yPercent: 108 });
-    gsap.set(parts.lines.flatMap((split) => split.lines), { yPercent: 108 });
-    gsap.set(parts.links, { y: 12, opacity: 0 });
+    tl.to(parts.bands.flatMap((split) => split.chars), { opacity: 0 }, 0);
+    tl.to(parts.titles.flatMap((split) => split.chars), { yPercent: 108 }, 0);
+    tl.to(parts.lines.flatMap((split) => split.lines), { yPercent: 108 }, 0);
+    tl.to(parts.links, { y: 12, opacity: 0 }, 0);
+    tl.to(parts.objects, { y: 22, autoAlpha: 0 }, 0);
+    return tl;
   }
 }

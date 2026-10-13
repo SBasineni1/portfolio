@@ -1,7 +1,9 @@
 import { about, bands, contact, education, experience, projects, site, type Band } from '../content';
 import { progressForAltitude } from '../world/camera';
 import { educationSplit, experienceCard, projectCard } from './cards';
-import { anchor, el } from './dom';
+import { el } from './dom';
+import { photoStack } from './photo-stack';
+import { mountRecoveryTag, type RecoveryTag } from './recovery-tag';
 import { attachRail } from './rail';
 
 /**
@@ -23,14 +25,13 @@ interface Positioned {
   shownSweep: number;
   /** Whether the head (titles, copy) and body (cards) have arrived, for the reveals. */
   arrived: boolean;
+  /** Reveal level below which the head resets: above wherever it rests at the pad. */
+  resetBelow: number;
   bodyArrived: boolean;
 }
 
 /** A section has arrived (`shown`) or fully left; `body` is a station's cards. */
 export type RevealListener = (section: HTMLElement, part: 'head' | 'body', shown: boolean) => void;
-
-/** 0 → "0", 900 → "0.9", 10000 → "10": kilometres without trailing zeros. */
-const km = (m: number): string => String(Math.round(m / 100) / 10);
 
 /** Viewport px a phone panel's top must stay below: the fixed nav plus a gap. */
 const NAV_CLEARANCE = 84;
@@ -39,6 +40,15 @@ const NAV_CLEARANCE = 84;
 const REVEAL_FAR = 0.85;
 /** Length of the fade, in viewports. Full opacity by 0.35 viewports out. */
 const REVEAL_RAMP = 0.5;
+/** A head that has faded below this resets, so it plays again on return. */
+const HEAD_RESET = 0.05;
+
+/** Scroll-linked reveal amount, 0..1, for a section centred at `center`. */
+function revealAt(scrollY: number, viewportHeight: number, center: number): number {
+  const d = Math.abs(scrollY + viewportHeight * 0.5 - center) / viewportHeight;
+  const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
+  return t * t * (3 - 2 * t);
+}
 
 export class Sections {
   private readonly items: Positioned[] = [];
@@ -48,6 +58,7 @@ export class Sections {
   /** Phone-width layout: text panels also send the balloon off-screen (see update). */
   private narrow = false;
   private exitState = 0;
+  private recoveryTag: RecoveryTag | null = null;
 
   constructor(
     private readonly reduced: () => boolean,
@@ -71,6 +82,8 @@ export class Sections {
     if (aboutHost) {
       aboutHost.append(el('p', 'panel__lede', about.lede));
       for (const p of about.paragraphs) aboutHost.append(el('p', undefined, p));
+      // Beside the copy on desktop, in the flow above the facts on phones.
+      aboutHost.append(photoStack(about.photos, this.reduced));
       if (about.facts.length > 0) {
         const facts = el('dl', 'facts');
         for (const fact of about.facts) {
@@ -82,14 +95,10 @@ export class Sections {
       }
     }
 
-    // Kicker: section number, the layer of sky it sits in, and its altitude range.
-    bands.forEach((band, index) => {
-      const host = document.querySelector(`[data-band="${band.id}"]`);
-      if (!host) return;
-      host.append(el('span', 'panel__index', String(index + 1).padStart(2, '0')));
-      host.append(el('span', 'panel__layer', band.layer));
-      host.append(el('span', 'panel__range', `${km(band.from)}–${km(band.to)} km`));
-    });
+    // Kicker: the layer of sky the section sits in, as a marker over the title.
+    for (const band of bands) {
+      document.querySelector(`[data-band="${band.id}"]`)?.append(el('span', 'panel__layer', band.layer));
+    }
 
     const projectHost = document.querySelector<HTMLElement>('[data-projects]');
     if (projectHost) {
@@ -108,20 +117,10 @@ export class Sections {
     }
 
     const eduHost = document.querySelector('[data-education]');
-    if (eduHost) eduHost.append(educationSplit(education));
+    if (eduHost) eduHost.append(educationSplit(education, this.reduced));
 
-    const contactHost = document.querySelector('[data-contact]');
-    if (contactHost) {
-      contactHost.append(link('Email', `mailto:${contact.email}`, contact.email));
-      contactHost.append(
-        link('GitHub', `https://github.com/${contact.github}`, `github.com/${contact.github}`),
-      );
-      if (contact.linkedin) {
-        contactHost.append(
-          link('LinkedIn', `https://www.linkedin.com/in/${contact.linkedin}/`, `linkedin.com/in/${contact.linkedin}`),
-        );
-      }
-    }
+    const contactHost = document.querySelector<HTMLElement>('[data-contact]');
+    if (contactHost) this.recoveryTag = mountRecoveryTag(contactHost, contact, this.reduced);
 
     for (const band of bands) {
       const section = document.querySelector<HTMLElement>(`#${band.id}`);
@@ -137,6 +136,7 @@ export class Sections {
           gate: 0,
           shownSweep: -1,
           arrived: false,
+          resetBelow: HEAD_RESET,
           bodyArrived: false,
         });
       }
@@ -156,6 +156,10 @@ export class Sections {
     for (const item of this.items) {
       const center = progressForAltitude(item.altitude) * range + viewportHeight * 0.5;
       item.center = center;
+      // About is already faintly in at the pad, and the page cannot scroll
+      // above it, so it would never fade far enough to reset: returning to
+      // the pad must put its copy away again, as on first load.
+      item.resetBelow = Math.max(HEAD_RESET, revealAt(0, viewportHeight, center) + 0.05);
       const h = item.el.offsetHeight;
       // Bottom-anchored on phones, but never higher than just under the fixed
       // nav: a tall panel runs off the bottom rather than hiding its heading.
@@ -182,9 +186,7 @@ export class Sections {
     let focus = 0;
     let exit = 0;
     for (const item of this.items) {
-      const d = Math.abs(scrollY + viewportHeight * 0.5 - item.center) / viewportHeight;
-      const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
-      const eased = t * t * (3 - 2 * t);
+      const eased = revealAt(scrollY, viewportHeight, item.center);
       let sweep = eased;
       // On a phone there is no room beside a text panel either, so About
       // parks the balloon off-screen too. Contact keeps it: its copy is about
@@ -228,7 +230,7 @@ export class Sections {
       if (!item.arrived && eased >= 0.5) {
         item.arrived = true;
         this.onReveal(item.el, 'head', true);
-      } else if (item.arrived && eased < 0.05) {
+      } else if (item.arrived && eased < item.resetBelow) {
         item.arrived = false;
         this.onReveal(item.el, 'head', false);
       }
@@ -263,19 +265,12 @@ export class Sections {
     return this.exitState;
   }
 
+  /** Contact's recovery tag, tied to the payload by main.ts. */
+  get recovery(): RecoveryTag | null {
+    return this.recoveryTag;
+  }
+
   get height(): number {
     return this.pageHeight;
   }
-}
-
-/** A contact row: label, value, and an arrow that moves on hover. The whole row is the link. */
-function link(key: string, href: string, label: string): HTMLLIElement {
-  const li = el('li');
-  const a = href.startsWith('mailto:') ? el('a') : anchor(href, '');
-  a.href = href;
-  a.className = 'links__row';
-  a.append(el('span', 'links__key', key), el('span', 'links__value', label), el('span', 'links__arrow', '↗'));
-  a.lastElementChild?.setAttribute('aria-hidden', 'true');
-  li.append(a);
-  return li;
 }

@@ -8,6 +8,7 @@ import { Scenery, groundScreenY, setGroundInset, type View } from './world/scene
 import { PadGear } from './world/pad';
 import { drawBalloon, type DrawOptions } from './world/render';
 import { sceneLight } from './world/paint';
+import { Weather, WEATHER_CYCLE } from './world/weather';
 import { pickSite, rememberSite } from './world/sites';
 import { Nav } from './ui/nav';
 import { Sections } from './ui/sections';
@@ -16,7 +17,10 @@ import { mountToast } from './ui/toast';
 import { startHeroTypewriter } from './ui/typewriter';
 import { mountProfile } from './ui/profile';
 import { mountSitePicker } from './ui/site-picker';
+import { mountSandbox } from './ui/sandbox';
+import { mountTips } from './ui/tips';
 import { Reveals } from './ui/reveals';
+import { bands } from './content';
 
 // A reload is a new launch: start on the pad, not wherever the last flight
 // was. The browser would otherwise restore the old scroll position (or jump to
@@ -97,6 +101,26 @@ const pad = new PadGear((strength) => {
   if (!reduced) balloon.gust(GUST_PEAK * strength, 1);
 });
 const scenery = new Scenery(lowPower ? 0.55 : 1, site, pad);
+const weather = new Weather(lowPower ? 140 : 300);
+/** Weather is off until a visitor turns it on; the choice is remembered. */
+const WEATHER_KEY = 'portfolio:weather';
+function weatherWanted(): boolean {
+  try {
+    return localStorage.getItem(WEATHER_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+function rememberWeather(on: boolean): void {
+  try {
+    localStorage.setItem(WEATHER_KEY, on ? 'on' : 'off');
+  } catch {
+    // Storage blocked: the choice lasts this visit only.
+  }
+}
+weather.setEnabled(weatherWanted(), site);
+/** The site the weather was last rolled for: a new site rolls new weather. */
+let weatherSite = site;
 const track = new ExitTrack();
 const reveals = new Reveals(() => reduced);
 const sections = new Sections(
@@ -117,10 +141,54 @@ const picker = mountSitePicker(
   (next) => scenery.setSite(next),
   (next) => scenery.preloadSite(next),
   () => reduced,
+  (on) => {
+    weather.setEnabled(on, scenery.site);
+    rememberWeather(on);
+    tips.used('weather');
+  },
 );
+
+// Sandbox mode: the content steps aside and the scroll flies an empty sky.
+const sandbox = mountSandbox({
+  reset: () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    camera.readFromScroll();
+    camera.jumpTo(0);
+  },
+  gust: () => balloon.gust(GUST_PEAK * (0.7 + Math.random() * 0.6), Math.random() < 0.5 ? -1 : 1),
+  cycleWeather: () => {
+    const at = WEATHER_CYCLE.indexOf(weather.current);
+    weather.set(WEATHER_CYCLE[(at + 1) % WEATHER_CYCLE.length]);
+    rememberWeather(true);
+    tips.used('weather');
+  },
+  onChange: (active) => {
+    if (active) tips.used('sandbox');
+    // The site tag stays live at any altitude while playing.
+    picker.setLaunch(active ? 0 : lastLaunch);
+    // Leaving restores the page's scroll position; fly back to it.
+    if (!active) camera.readFromScroll();
+  },
+});
+const tips = mountTips({
+  reduced: () => reduced,
+  weatherOn: () => weather.isEnabled,
+  sandboxOn: () => sandbox.active,
+  turnOnWeather: () => {
+    weather.setEnabled(true, scenery.site);
+    rememberWeather(true);
+  },
+  openSandbox: () => sandbox.open(),
+});
+/** How far the content has sent the balloon off-screen; nothing does in the sandbox. */
+const contentExit = (): number => (sandbox.active ? 0 : sections.exit);
 
 let driftX = 0;
 let time = 0;
+/** Surface wind at the balloon this step, for the rain's lean. */
+let windNowX = 0;
+/** This frame's real time step, for the once-per-frame weather pass. */
+let frameDelta = 0;
 let anchored = true;
 let windStrength = 0;
 let narrow = window.innerWidth < 900;
@@ -199,7 +267,7 @@ function syncSignals(altitude: number, nextFocus: number): void {
   if (Math.abs(launchEased - lastLaunch) >= 0.004) {
     lastLaunch = launchEased;
     document.documentElement.style.setProperty('--launch', launchEased.toFixed(3));
-    picker.setLaunch(launchEased);
+    if (!sandbox.active) picker.setLaunch(launchEased);
   }
   if (Math.abs(nextFocus - lastFocus) < 0.004) return;
   lastFocus = nextFocus;
@@ -270,14 +338,16 @@ function update(dt: number): void {
   env.anchored = anchored;
   env.burst = burstAmount(altitude);
   env.windX = wind.x;
-  env.windY = wind.y;
+  // Rain or snow on the envelope pushes it down a little (canvas y is down).
+  env.windY = wind.y + weather.push(altitude, reduced);
+  windNowX = wind.x;
   const defaultY = narrow ? 0.17 : anchored ? 0.42 : 0.44;
   track.homeY = height * defaultY;
-  track.target = sections.exit;
+  track.target = contentExit();
   track.update(dt);
   env.homeX = tracked && !reduced
     ? track.x(width)
-    : width * 0.5 + sections.exit * (reduced ? 0 : 1) * (width * 0.5 + EXIT_CLEARANCE);
+    : width * 0.5 + contentExit() * (reduced ? 0 : 1) * (width * 0.5 + EXIT_CLEARANCE);
   env.homeY = tracked && !reduced ? track.y(height) : track.homeY;
   env.padX = width * 0.5;
   env.padY = groundScreenY(altitude, height) - 10;
@@ -299,6 +369,7 @@ function render(alpha: number): void {
   view.driftX = driftX;
   view.windStrength = windStrength;
   view.reduced = reduced;
+  weather.update(frameDelta, view, windNowX, reduced, (strength, dir) => balloon.gust(GUST_PEAK * strength, dir));
 
   scenery.setBalloon(balloon.centroidX, balloon.centroidY, balloon.severed ? 0 : balloon.envelopeR);
   const sceneryFrame = skyFrame % 3 === 0;
@@ -326,6 +397,7 @@ function render(alpha: number): void {
   skyFrame++;
 
   context.clearRect(0, 0, width, height);
+  weather.drawBack(context, view);
 
   drawOptions.time = time;
   scenery.sceneLight(view, balloon.centroidX, balloon.centroidY, drawOptions.light);
@@ -333,6 +405,13 @@ function render(alpha: number): void {
   drawOptions.alpha = alpha;
   drawOptions.fade = reduced ? 1 - hidden : 1;
   drawBalloon(context, balloon, drawOptions);
+  sections.recovery?.tether(
+    context,
+    balloon.world.rx(balloon.payloadBottom, alpha),
+    balloon.world.ry(balloon.payloadBottom, alpha),
+    frameDelta,
+  );
+  weather.drawFront(context, view);
 
   scenery.drawForeground(context, view);
 }
@@ -355,20 +434,38 @@ function frame(timestamp: number): void {
   }
   if (steps === 12) accumulator = 0;
 
+  if (scenery.site !== weatherSite) {
+    weatherSite = scenery.site;
+    weather.roll(weatherSite);
+  }
+  frameDelta = delta;
   render(accumulator / SIM_STEP);
 
   tape.update(currentTime, camera.altitude);
   nav.update(camera.altitude);
   const balloonClear = reduced ? hidden > 0.97 : balloon.leftmostX > width + 8;
-  focus = sections.update(window.scrollY, height, delta, balloonClear);
-  hidden += (sections.exit - hidden) * (1 - Math.exp(-delta * 5));
+  focus = sandbox.active ? 0 : sections.update(window.scrollY, height, delta, balloonClear);
+  hidden += (contentExit() - hidden) * (1 - Math.exp(-delta * 5));
   syncSignals(camera.altitude, focus);
   launchNote.track(balloon.centroidX, balloon.centroidY, balloon.envelopeR, !anchored);
   picker.follow(scenery.site);
   polaroid.setCloud(scenery.site.cloud);
+  picker.setWeather(weather.label, weather.isEnabled);
+  tips.update(camera.altitude, sandbox.active);
+  syncSkyTone();
   picker.setLoading(!scenery.settled);
 
   requestAnimationFrame(frame);
+}
+
+/** The About photo cards are edged in the sky they sit on (see .snap). */
+const ABOUT_ALTITUDE = bands.find((band) => band.id === 'about')?.altitude ?? 0;
+let skyTone = '';
+function syncSkyTone(): void {
+  const tone = scenery.skyTone(ABOUT_ALTITUDE);
+  if (tone === skyTone) return;
+  skyTone = tone;
+  document.documentElement.style.setProperty('--sky-tone', tone);
 }
 
 window.addEventListener('scroll', () => camera.readFromScroll(), { passive: true });

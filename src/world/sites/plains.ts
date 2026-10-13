@@ -42,4 +42,6 @@ export const plains: LaunchSite = {
     sock: [-300, -12],
   },
   cloud: { top: '#dcdee0', base: '#a3a8ae' },
+  // Under the overcast: precipitation falls from the deck's base.
+  weather: { base: 700, odds: { drizzle: 0.22, rain: 0.18, storm: 0.12 } },
 };

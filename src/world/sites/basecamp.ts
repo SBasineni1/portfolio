@@ -45,4 +45,5 @@ export const basecamp: LaunchSite = {
     sock: [262, -14],
   },
   cloud: { top: '#eef2f7', base: '#aebfd2' },
+  weather: { base: 1100, odds: { flurries: 0.25, snow: 0.15 } },
 };

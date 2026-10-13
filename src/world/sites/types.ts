@@ -1,3 +1,5 @@
+import type { SiteWeather } from '../weather';
+
 /**
  * A launch site: illustrated depth plates, the sky near the ground, and the
  * live effects that animate it. Plates come from tools/assets/plates.py and
@@ -109,4 +111,6 @@ export interface LaunchSite {
   fx: SiteFx[];
   stage: SiteStage;
   cloud: SiteCloud;
+  /** This site's climate under its clouds (see world/weather.ts). */
+  weather: SiteWeather;
 }

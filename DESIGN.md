@@ -80,7 +80,7 @@ so the antenna swings. Painted stand-ins draw only until the photos decode. The 
 painted, because only a painted envelope can deform with the Verlet ring. Everything shares one
 `SceneLight` (`src/world/paint.ts`).
 
-**Near space** borrows its starfield from the CornellGeoData site's hero
+**space** borrows its starfield from the CornellGeoData site's hero
 (`CornellGeoData/Official-Website`, `src/pages/home/`), adapted to an altitude-driven scene:
 - **Starfield** (`src/world/stars.ts`, after its `Sky.tsx`):
   - a dense field of up to 1800 stars, 75% faint pinpricks, 20% mid and 5% bright with a soft glow,

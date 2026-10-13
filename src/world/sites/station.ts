@@ -44,5 +44,6 @@ export const station: LaunchSite = {
     sock: [246, -8],
   },
   cloud: { top: '#f3e3cf', base: '#b8a9ad' },
+  weather: { base: 1100, odds: { drizzle: 0.2, rain: 0.18, storm: 0.08 } },
 };
 

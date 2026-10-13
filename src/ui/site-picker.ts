@@ -11,6 +11,8 @@ export interface SitePicker {
   follow(site: LaunchSite): void;
   /** True while the chosen site's plates are still downloading or decoding. */
   setLoading(loading: boolean): void;
+  /** The conditions at the site, shown under its name, and whether weather is on. */
+  setWeather(label: string, enabled: boolean): void;
 }
 
 /**
@@ -28,11 +30,16 @@ export function mountSitePicker(
   show: (site: LaunchSite) => void,
   preload: (site: LaunchSite) => void,
   reduced: () => boolean,
+  /** The weather button: turn weather on or off. */
+  toggleWeather: (on: boolean) => void = () => undefined,
 ): SitePicker {
   const root = document.querySelector<HTMLElement>('[data-site-picker]');
-  if (!root) return { setLaunch: () => undefined, follow: () => undefined, setLoading: () => undefined };
+  if (!root) {
+    return { setLaunch: () => undefined, follow: () => undefined, setLoading: () => undefined, setWeather: () => undefined };
+  }
   const count = root.querySelector<HTMLElement>('[data-site-count]');
   const name = root.querySelector<HTMLElement>('[data-site-name]');
+  const weather = root.querySelector<HTMLElement>('[data-site-weather]');
   const toast = document.querySelector<HTMLElement>('[data-toast]');
   let index = siteIndex(initial);
 
@@ -93,6 +100,8 @@ export function mountSitePicker(
     neighbours();
   };
 
+  const weatherToggle = root.querySelector<HTMLElement>('[data-site-weather-toggle]');
+  weatherToggle?.addEventListener('click', () => toggleWeather(weatherToggle.getAttribute('aria-pressed') !== 'true'));
   root.querySelector('[data-site-prev]')?.addEventListener('click', () => step(-1));
   root.querySelector('[data-site-next]')?.addEventListener('click', () => step(1));
   root.addEventListener('keydown', (event) => {
@@ -150,6 +159,14 @@ export function mountSitePicker(
       index = actual;
       animateTo(direction);
       record(site);
+    },
+    setWeather(label: string, enabled: boolean): void {
+      if (weather && weather.textContent !== label) weather.textContent = label;
+      const pressed = String(enabled);
+      if (weatherToggle && weatherToggle.getAttribute('aria-pressed') !== pressed) {
+        weatherToggle.setAttribute('aria-pressed', pressed);
+        weatherToggle.setAttribute('aria-label', enabled ? 'Turn weather off' : 'Turn weather on');
+      }
     },
     setLoading(next: boolean): void {
       if (next === loading) return;
