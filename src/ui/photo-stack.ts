@@ -28,7 +28,9 @@ const THROWS: [number, string][] = [
   [1200, 'Soft toss'],
   [2400, 'Good throw'],
   [4000, 'Strong throw'],
-  [Infinity, 'Fastball'],
+  [10000, 'Fastball'],
+  [15000, 'Ultra fastball'],
+  [Infinity, 'Record-breaking!'],
 ];
 /** A tap or key press throws this hard. */
 const TOSS = { vx: 1350, vy: -260 };
@@ -91,15 +93,17 @@ function backdropLuminance(rect: DOMRect): number {
 }
 
 /**
- * Resting angle of each place in the stack, degrees, top first: fanned both
- * ways so the cards underneath show at the edges. A card takes the angle of
+ * Resting angle of each place in the stack, degrees, top first: a gentle fan
+ * so two cards show at the edges underneath. Deeper cards sit squared up in
+ * the last place, hidden, so the edge stays tidy. A card takes the angle of
  * whatever place it moves into.
  */
-const SLOT_TILTS = [-5, 4, -2.5, 6, -4, 2];
+const SLOT_TILTS = [-1.5, 2.5, -3];
 
 /** Resting offset and angle of the print `depth` cards down from the top. */
 function slot(depth: number) {
-  return { x: depth * 1.5, y: depth * 2, rotation: SLOT_TILTS[depth % SLOT_TILTS.length] };
+  const place = Math.min(depth, SLOT_TILTS.length - 1);
+  return { x: place * 1.5, y: place * 2, rotation: SLOT_TILTS[place] };
 }
 
 export function photoStack(photos: AboutPhoto[], reduced: () => boolean): HTMLElement {
@@ -164,7 +168,7 @@ export function photoStack(photos: AboutPhoto[], reduced: () => boolean): HTMLEl
   };
 
   const show = (speed: number): void => {
-    const name = THROWS.find(([limit]) => speed < limit)?.[1] ?? 'Fastball';
+    const name = THROWS.find(([limit]) => speed < limit)?.[1] ?? 'Record-breaking!';
     readout.textContent = `${name}, ${Math.round(speed).toLocaleString('en-US')} px/s`;
   };
 

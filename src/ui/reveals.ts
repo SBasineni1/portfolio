@@ -30,7 +30,7 @@ interface SectionParts {
 const LINE_TARGETS = '.station__lede, .panel__lede, .panel__body p, .panel__foot';
 /** The pieces of a card that settle in, in reading order. */
 const CARD_PIECES =
-  '.rail__divider-label, .card__label, .card__cover, .card__body, .card__logo, .card__content, .edu__cover, .edu__card > *, .edu__row';
+  '.rail__divider-label, .card__cover, .card__body, .card__logo, .card__content, .edu__cover, .edu__card > *, .edu__row';
 
 export class Reveals {
   private readonly sections = new Map<HTMLElement, SectionParts>();

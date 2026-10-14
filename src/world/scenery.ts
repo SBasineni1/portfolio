@@ -282,15 +282,6 @@ export class Scenery {
     this.drawGround(ctx, v);
   }
 
-  /**
-   * The sky's mid band at an altitude, as it is painted right now (site
-   * colours, cross-fades and dusk included): for DOM objects that sit on it.
-   */
-  skyTone(altitude: number): string {
-    const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - altitude / 2000));
-    return skyColor(altitude, 'mid', 1, dusk, this.sky);
-  }
-
   /** Foreground haze + low cloud drawn after the balloon. */
   drawForeground(ctx: CanvasRenderingContext2D, v: View): void {
     this.drawForegroundClouds(ctx, v);

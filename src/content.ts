@@ -8,8 +8,8 @@ export const site = {
   tagline:
     "I'm a computer science student at Cornell University minoring in atmospheric science, building full stack systems for climate and weather data.",
   ledes: {
-    projects: 'Weather models, markets, and AI agents, turned into tools you can open and use.',
-    experience: 'Internships at NOAA and Commvault, and two project teams at Cornell.',
+    projects: "Building usable tools, websites, and researching things I'm passionate about!",
+    experience: 'Internships at NOAA and Commvault, and clubs at Cornell!',
     education: 'Pursuing a B.S. in Computer Science with a minor in Atmospheric Science at Cornell University.',
   },
 };
@@ -31,22 +31,25 @@ export interface AboutPhoto {
   caption?: string;
 }
 
+export interface AboutFact {
+  label: string;
+  value: string;
+}
+
+const noFacts: AboutFact[] = [];
+
 /**
  * About: one lede sentence set large, then body paragraphs, then a short
  * "at a glance" list. Keep the lede to one or two sentences; facts read best
  * as 3–5 short rows (leave `facts` empty to hide the list).
  */
 export const about = {
-  lede: "I'm a Computer Science student at Cornell minoring in Atmospheric Science, originally from Marlboro, NJ. I like building full stack apps and data pipelines that make weather data easier to use.",
+  lede: 'I’m a Computer Science student at Cornell, minoring in Atmospheric Science, and I’m originally from New Jersey. I like building full-stack apps and data pipelines that make weather data easier to use.',
   paragraphs: [
-    "Lately I've been spending most of my time on forecast verification, from scoring hurricane rainfall forecasts at NOAA this past summer to EdgeCast, a model blend that prices Kalshi temperature markets. I'm also building Saffral, a tool that catches AI agents wasting tokens. At Cornell I lead a team at Cornell Data Journal and help build a water-quality buoy for Cayuga Lake with Cornell GeoData. I'm always looking for ways to use what I learn in class on real weather problems.",
-    "Outside of code, I'm an Eagle Scout. For my Eagle project I built a weather education kiosk, complete with its own weather station, and I've put in over 400 hours of community service along the way. I got into weather research in high school, with projects on tornado formation and North Atlantic hurricanes, and these days I'm building a 3D-printed weather station that logs its readings to a Raspberry Pi.",
+    'This past summer, I did research at NOAA, evaluating how well hurricane models forecast rainfall at landfall. From this research, I’ve grown interested in optimization by reducing runtime for HPC workflows and faster live-image rendering. Lately, I’ve been spending most of my time on machine learning and AI agents. I’m especially interested in AI weather models, like GraphCast’s graph neural networks and diffusion models like GenCast, and how they are making forecasts more accurate.',
+    'Outside of coding, I’m an Eagle Scout and received the Congressional Award Gold Medal for over 400 hours of service. For my previous research work, I was named a Regeneron Science Talent Search Scholar, specifically researching the impact that climate oscillations have on the intensity and frequency of North Atlantic Hurricanes. In my free time, I like to hike, hang out with friends, cook, paint, and photograph and track storms, whether they’re in my backyard or across the country.',
   ],
-  facts: [
-    { label: 'Studying', value: 'Computer Science, Cornell University' },
-    { label: 'Currently', value: 'Building EdgeCast and Saffral' },
-    { label: 'Based in', value: 'Ithaca, NY' },
-  ],
+  facts: noFacts,
   /**
    * The throwable photo stack beside About, top print first. Photos are 4:3
    * (960×720 WebP in public/about/). `caption` shows on the print's bottom
@@ -92,50 +95,75 @@ export const about = {
 };
 
 export interface Project {
+  group: 'software' | 'research';
   title: string;
   description: string;
   tech: string[];
   link?: string;
   repo?: string;
+  /** A deck about the project, e.g. hackathon slides. */
+  slides?: string;
   cover?: string;
+  /** A screenshot that rises into the cover on hover (16:10, in public/projects/). */
+  preview?: string;
   accent?: string;
   year?: string;
 }
 
+// SAFETY: Preserve literal labels while checking that every project group is covered.
+export const projectGroups = {
+  software: 'Software',
+  research: 'Research',
+} as const satisfies Record<Project['group'], string>;
+
+// Keep each group together: a label is drawn wherever the group changes.
 export const projects: Project[] = [
   {
-    title: 'EdgeCast',
+    group: 'software',
+    title: 'Forecast Graphics',
     year: '2026',
+    accent: '#1f5fbf',
+    preview: asset('projects/nws-graphics.webp'),
     description:
-      'Blends the HRRR, GFS, and NBM weather models to price Kalshi temperature markets in 20 U.S. cities. Bias correction and a LightGBM layer bring average forecast error down from 2.07°F to 1.67°F.',
-    tech: ['Python', 'FastAPI', 'LightGBM', 'SQLite', 'React'],
-    link: 'https://edge-cast-iota.vercel.app',
-    repo: 'https://github.com/SBasineni1/EdgeCast',
-  },
-  {
-    title: 'NWS Forecast Graphics',
-    year: '2026',
-    description:
-      "3-day temperature, wind, rain, and severe-risk maps for all 121 National Weather Service offices, drawn on canvas from gridpoint data. A scheduled GitHub Actions job precomputes every office's forecast to Cloudflare R2, so pages load without waiting on live API calls.",
+      "Forecast maps for every National Weather Service office and each region. Each office features live conditions and alerts, the next three days of temperature, wind, rain, and severe weather risk, and current atmospheric conditions.",
     tech: ['TypeScript', 'Next.js', 'Python', 'Cloudflare R2'],
     link: 'https://nws-graphics.vercel.app',
     repo: 'https://github.com/SBasineni1/NWSGraphics',
   },
   {
-    title: 'Saffral',
+    group: 'software',
+    title: 'EdgeCast',
     year: '2026',
+    accent: '#0f7a4a',
+    preview: asset('projects/edgecast.webp'),
     description:
-      'Local-first monitoring that flags stuck or wasteful AI-agent runs before they burn through tokens and money. A pass-through proxy feeds agent HTTP/SSE traffic to a failure-prediction model without exposing prompts, code, or keys.',
-    tech: ['Python', 'Rust', 'NumPy', 'pytest'],
-    repo: 'https://github.com/saffral-ai/core',
+      "A forecasting tool for Kalshi's daily temperature markets. It blends the HRRR, GFS, and NBM weather models into one forecast for each of 20 U.S. cities, which then determines the most likely high or low temperature range.",
+    tech: ['Python', 'FastAPI', 'LightGBM', 'SQLite', 'React'],
+    link: 'https://edge-cast-iota.vercel.app',
+    repo: 'https://github.com/SBasineni1/EdgeCast',
   },
   {
+    group: 'software',
     title: 'Helicity',
     year: '2026',
+    accent: '#6a3fb5',
+    preview: asset('projects/helicity.webp'),
     description:
-      'Scores stablecoin reserve risk from financial, banking, geographic, and weather data. Coins, issuers, and banks live in a NetworkX graph, so one failing bank flags every exposed coin, and Claude and Gemini audit the scores over MCP.',
+      "A risk tool that scores how safe each stablecoin's reserves are, using financial, banking, geographic, and weather data. It tracks which banks hold each coin's reserves, so an issue at one bank will impact all stablecoins attached to it.",
     tech: ['Python', 'FastAPI', 'React', 'NetworkX', 'Claude API'],
     repo: 'https://github.com/AI-HackathonNYC/helicity',
+    slides: 'https://ai-hackathonnyc.github.io/helicity/',
+    link: 'https://helicity-theta.vercel.app',
+  },
+  {
+    group: 'software',
+    title: 'Saffral',
+    year: '2026',
+    accent: '#c8641a',
+    description:
+      "A monitor that watches AI agents as they run and warns you when one gets stuck or starts wasting tokens. It sits locally between the agent and its API, so prompts, code, and keys are never vulnerable.",
+    tech: ['Python', 'Rust', 'NumPy', 'pytest'],
+    repo: 'https://github.com/saffral-ai/core',
   },
 ];
 

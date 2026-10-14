@@ -2,6 +2,7 @@ import type { EducationEntry, ExperienceEntry, Project } from '../content';
 import { mountCarousel } from './carousel';
 import { anchor, el } from './dom';
 import { icon, type IconName } from './icons';
+import { attachPreviewPop } from './preview-pop';
 
 /** Each skill's mark: the tool's own logo where it has one, else a symbol for the idea. */
 const SKILL_ICONS = new Map<string, IconName>([
@@ -35,20 +36,42 @@ function coverImage(src: string): HTMLImageElement {
   return image;
 }
 
+// Touch screens have no hover: a preview rises inside the cover once its card
+// is swiped mostly into view instead.
+let touchObserver: IntersectionObserver | undefined;
+
+function revealOnTouch(card: HTMLElement): void {
+  touchObserver ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) entry.target.classList.toggle('is-previewing', entry.isIntersecting);
+    },
+    { threshold: 0.6 },
+  );
+  touchObserver.observe(card);
+}
+
 export function projectCard(project: Project, index: number): HTMLLIElement {
   const card = el('li', 'card card--project');
   card.style.setProperty('--i', String(index));
   if (project.accent) card.style.setProperty('--accent', project.accent);
 
-  // Title row above the cover, the way a plate is captioned. The cover
-  // repeats the title at display size on purpose.
-  const label = el('div', 'card__label');
-  label.append(el('h3', 'card__title', project.title));
-  card.append(label);
-
+  // The display title on the cover is the card's heading; no caption row repeats it.
   const cover = el('div', 'card__cover');
   if (project.cover) cover.append(coverImage(project.cover));
-  cover.append(el('span', 'card__big', project.title));
+  cover.append(el('h3', 'card__big', project.title));
+  if (project.preview) {
+    if (matchMedia('(hover: hover)').matches) {
+      attachPreviewPop(card, cover, project.preview);
+    } else {
+      const preview = el('div', 'card__preview');
+      const shot = coverImage(project.preview);
+      shot.alt = `${project.title} screenshot`;
+      shot.loading = 'lazy';
+      preview.append(shot);
+      cover.append(preview);
+      revealOnTouch(card);
+    }
+  }
   card.append(cover);
 
   const body = el('div', 'card__body');
@@ -58,13 +81,19 @@ export function projectCard(project: Project, index: number): HTMLLIElement {
     for (const item of project.tech) chips.append(el('li', undefined, item));
     body.append(chips);
   }
-  if (project.repo || project.link) {
+  if (project.repo || project.slides || project.link) {
     const actions = el('div', 'card__actions');
     if (project.repo) {
       const repo = anchor(project.repo, 'Repository');
       repo.className = 'button button--ghost';
       repo.prepend(icon('github'));
       actions.append(repo);
+    }
+    if (project.slides) {
+      const slides = anchor(project.slides, 'Slides');
+      slides.className = 'button button--ghost';
+      slides.prepend(icon('presentation'));
+      actions.append(slides);
     }
     if (project.link) {
       const visit = anchor(project.link, 'View project');

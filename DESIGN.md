@@ -513,9 +513,13 @@ left on the page.
 
 ### Navigation tab
 Supaste-derived: fixed top-center, black, hanging from the top edge with 18px bottom corners and
-20×20 inverted-corner flares. A 30px balloon-glyph icon plus wordmark, Cal Sans 14px links, and
-Contact set as a white pill CTA. `is-current` is driven by the band altitude thresholds; items
-scroll via `scrollToAltitude`.
+20×20 inverted-corner flares. A 30px balloon-glyph icon plus wordmark (never wrapped: the tab is
+`width: max-content`), Cal Sans 14px links (About, Projects, Experience, Education), and Contact
+set as a white pill CTA. `is-current` is driven by the band altitude thresholds (a band lights
+1.2 km before its range, and never before halfway to its own altitude, so About is not lit on the
+pad); items scroll via `scrollToAltitude`. The tab narrows in steps: tighter gaps at 1000px; the
+wordmark and the sandbox label drop at 760px; phone sizes at 520px and 400px; at 350px the sandbox
+toggle steps out.
 
 ### Rail
 `overflow-x: auto`, `scroll-snap-type: x mandatory`, gap 20px, trailing 40vw padding so the
@@ -529,10 +533,20 @@ The one rounded surface: 16px radius, 1px `--hair` frame, `--card-paper` stock w
 family. One `--card-pad` (24px, 18px on narrow) drives every inset. Sizes: project 60vw × 55vh,
 experience 40vw × 55vh (76vw / 72vw × 46vh below 900px). Each card sets `--i` for the sweep
 stagger and may set `--accent`.
-- **Project card**: label row in the data face (index · title · year) above a cover, then body
-  (description, tags, bracket links). The default cover is typographic — the title in the
-  display face at up to 176px, weight 800, tracking −0.03em, set at the bottom-left and clipped by
-  the card so it bleeds off the right edge.
+- **Project card**: a cover, then body (description, tags, links). No label row: the cover's
+  display title is the card's heading. The default cover is typographic — the title in the
+  display face at up to 176px (capped at 42% of the cover's height), set at the bottom-left; a
+  long name wraps to a second line rather than running off the card.
+- **Project preview** (`preview?`, a 16:10 screenshot in `public/projects/`): on a pointer that
+  can hover, hover or keyboard focus opens it as a window in a fixed layer above the page
+  (`src/ui/preview-pop.ts`), its lower edge seated in the cover and rising over the card and the
+  sky above, stopping below the nav. It blooms from a thumbnail at the pointer (expo-out, 0.6s)
+  and shrinks back to it on leave; any scroll cuts it at once, and it reopens for the card under
+  the pointer when the scroll settles. Resting 2s on a card (page and rail both still, section
+  fully in) opens the settled card's window without a hover. Only the card the rail has settled on (≥90% in view)
+  opens one, never a neighbour at the fade. It lives outside the rail so the rail's clip and
+  fade never cut it. Hairline frame, no shadow. On touch it rises inside the cover, cropped at the bottom,
+  once the card is mostly in view. The display title fades out while either is up.
 - **Experience card**: the cover *is* the surface — a photo under an `--accent` tint with a
   bottom-weighted scrim, or the tint alone. Logo slot top-left (image, or the org name in the
   data face). Content bottom-left: date eyebrow, role at 22/650/−0.02em, summary 14/1.55, tags.

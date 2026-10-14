@@ -20,7 +20,6 @@ import { mountSitePicker } from './ui/site-picker';
 import { mountSandbox } from './ui/sandbox';
 import { mountTips } from './ui/tips';
 import { Reveals } from './ui/reveals';
-import { bands } from './content';
 
 // A reload is a new launch: start on the pad, not wherever the last flight
 // was. The browser would otherwise restore the old scroll position (or jump to
@@ -452,20 +451,9 @@ function frame(timestamp: number): void {
   polaroid.setCloud(scenery.site.cloud);
   picker.setWeather(weather.label, weather.isEnabled);
   tips.update(camera.altitude, sandbox.active);
-  syncSkyTone();
   picker.setLoading(!scenery.settled);
 
   requestAnimationFrame(frame);
-}
-
-/** The About photo cards are edged in the sky they sit on (see .snap). */
-const ABOUT_ALTITUDE = bands.find((band) => band.id === 'about')?.altitude ?? 0;
-let skyTone = '';
-function syncSkyTone(): void {
-  const tone = scenery.skyTone(ABOUT_ALTITUDE);
-  if (tone === skyTone) return;
-  skyTone = tone;
-  document.documentElement.style.setProperty('--sky-tone', tone);
 }
 
 window.addEventListener('scroll', () => camera.readFromScroll(), { passive: true });

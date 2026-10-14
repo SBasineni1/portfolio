@@ -135,7 +135,7 @@
   --card-radius: 16px;
   --card-pad: 24px;
   --rail-gap: 20px;
-  --rail-divider-width: 72px;
+  --rail-divider-width: 24px;
   --rail-fade: 64px;
   /* Default card accent. Lifted off the sky's own value on purpose — at the
      tropopause a card tinted in the sky's blue disappears into it. Per-card
@@ -256,6 +256,9 @@ a {
   z-index: 30;
   display: flex;
   align-items: center;
+  /* Its own width, not the half viewport left of centre leaves it, which
+     would wrap the name before the tab ever reached the edges. */
+  width: max-content;
   gap: 32px;
   padding: 10px 12px 10px 10px;
   background: #0d0d0d;
@@ -295,6 +298,7 @@ a {
   font-weight: 600;
   font-size: 14px;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 /* The icon slot is one of the five jobs --flare is allowed to hold. The glyph
@@ -893,7 +897,7 @@ a {
   max-width: 48ch;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--ink-2);
+  color: var(--ink);
   text-shadow: var(--halo);
 }
 
@@ -1396,7 +1400,7 @@ a {
   margin: 0 0 14px;
   font-size: 15px;
   line-height: 1.65;
-  color: var(--ink-2);
+  color: var(--ink);
 }
 
 .panel__body > :last-child {
@@ -1470,10 +1474,8 @@ a {
   overflow: hidden;
   border-radius: var(--card-radius);
   background: #2b2d31;
-  /* Edged in the sky behind it, a touch lighter (main.ts → --sky-tone, per
-     launch site), so the stack reads as cut from the scene it sits in. */
-  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--sky-tone, rgb(150, 180, 215)) 78%, white),
-    0 1px 1.5px rgba(10, 16, 28, 0.22), 0 16px 34px -14px rgba(10, 18, 34, 0.55);
+  /* A thin white edge like a print's border, and one soft shadow under it. */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85), 0 14px 30px -16px rgba(10, 18, 34, 0.45);
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
@@ -1896,32 +1898,50 @@ body.low-power .rail > .rail__divider {
   will-change: auto;
 }
 
-/* Group headings stretch with the cards without becoming snap targets. */
+/* Group labels sit above each group's first card, so the rail starts flush
+   with the section heading. Between groups, a hairline in a wider gap marks
+   the break. The dividers stretch with the cards without becoming snap
+   targets. */
+.rail:has(> .rail__divider) {
+  padding-top: 40px;
+}
+
 .rail__divider {
+  position: relative;
   flex: 0 0 var(--rail-divider-width);
   align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-inline-start: 1px solid rgb(255 255 255 / 0.5);
   scroll-snap-align: none;
 }
 
-.rail__divider + .card {
-  scroll-margin-inline-start: calc(var(--rail-divider-width) + var(--rail-gap));
+.rail__divider:first-child {
+  flex-basis: 0;
+  margin-inline-end: calc(-1 * var(--rail-gap));
+}
+
+.rail__divider:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  border-inline-start: 1px solid rgb(255 255 255 / 0.3);
 }
 
 .rail__divider-label {
-  margin: 0;
-  writing-mode: vertical-rl;
-  rotate: 180deg;
-  color: #f4f7fa;
+  position: absolute;
+  bottom: 100%;
+  left: calc(100% + var(--rail-gap));
+  margin: 0 0 12px;
+  white-space: nowrap;
   font-family: var(--display);
   font-size: 22px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
+  letter-spacing: -0.01em;
+  color: #f4f7fa;
+}
+
+.rail__divider:first-child .rail__divider-label {
+  left: 0;
 }
 
 .rail::-webkit-scrollbar {
@@ -1966,16 +1986,6 @@ body.low-power .rail > .rail__divider {
   border: 0;
 }
 
-/* Label row: the title, above the cover the way a plate is captioned. The
-   cover repeats it at display size, deliberately. */
-.card__label {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex: none;
-  padding: var(--card-pad) var(--card-pad) 14px;
-}
-
 .card__cover {
   overflow: hidden;
 }
@@ -1986,6 +1996,8 @@ body.low-power .rail > .rail__divider {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  /* The display title sizes against the cover's own height (cqh). */
+  container-type: size;
   background: color-mix(in oklab, #ffffff 92%, var(--accent));
 }
 
@@ -2003,16 +2015,113 @@ body.low-power .rail > .rail__divider {
 
 .card__big {
   position: absolute;
+  margin: 0;
   left: var(--card-pad);
   bottom: -0.08em;
-  color: var(--ink);
+  /* The one place a project's colour shows; the rest of the card stays neutral. */
+  color: var(--accent);
   font-family: var(--display);
-  font-size: clamp(64px, 10vw, 176px);
+  /* A long name wraps to a second line instead of running off the card; the
+     cqh cap keeps two lines inside a short cover. */
+  right: var(--card-pad);
+  font-size: clamp(56px, min(10vw, 42cqh), 176px);
   font-weight: 700;
   font-variation-settings: var(--geo);
-  line-height: 1;
+  line-height: 0.92;
   letter-spacing: -0.015em;
-  white-space: nowrap;
+}
+
+/* Over a pointer, the screenshot opens as a window in its own layer above
+   the page (preview-pop.ts): its lower edge seated in the cover, rising over
+   the card and the sky above it. It lives outside the rail so the rail's
+   scroll clip and edge fade never cut it. Hairline frame, no shadow (§7). */
+.preview-pop {
+  position: fixed;
+  z-index: 20;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--card-paper);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-ink) 14%, transparent);
+  pointer-events: none;
+  /* Shut, it is a thumbnail at the pointer (preview-pop.ts sets the origin);
+     open, it blooms from there to full size on a long expo ease, and shrinks
+     back to the same point, quicker, when the pointer leaves. */
+  opacity: 0;
+  transform: scale(0.16);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.18s cubic-bezier(0.4, 0, 1, 1) 0.04s,
+    transform 0.24s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.preview-pop.is-open {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.16s cubic-bezier(0, 0, 0.2, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* While a window is up, the section's heading and group labels behind it
+   step out so the screenshot reads alone. (Their inner lines and chars carry
+   the reveal's opacity; these wrappers carry none, so the two never fight.) */
+.station__head,
+.rail > .rail__divider {
+  transition: opacity 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.station.has-pop .station__head,
+.station.has-pop .rail > .rail__divider {
+  opacity: 0;
+}
+
+/* Shut by a scroll: gone at once rather than fading where the card was. */
+.preview-pop.is-cut {
+  transition: none;
+}
+
+.preview-pop img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Touch screens: the screenshot waits below the cover's lower edge and rises
+   into it once the card is swiped into view, cropped at the bottom. */
+.card__preview {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  width: min(78%, 620px);
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-ink) 10%, transparent);
+  opacity: 0;
+  transform: translate(-50%, 24%);
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.35s ease;
+}
+
+.card--project > .card__cover .card__preview img {
+  object-position: top;
+}
+
+.card--project.is-previewing .card__preview {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* The display title steps back while its screenshot is up. */
+.card__big {
+  transition: opacity 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.card--project.is-popped .card__big,
+.card--project.is-previewing .card__big {
+  opacity: 0;
 }
 
 .card__body {
@@ -2036,11 +2145,6 @@ body.low-power .rail > .rail__divider {
   line-height: 1.65;
   letter-spacing: -0.011em;
   color: var(--ink-2);
-}
-
-.card--project .card__title {
-  font-size: 17px;
-  font-weight: 600;
 }
 
 .card--project .card__text {
@@ -2692,36 +2796,6 @@ body.low-power .rail > .rail__divider {
   color: var(--ink-2);
 }
 
-.ruler {
-  display: flex;
-  gap: 6px;
-  align-items: flex-end;
-  height: 24px;
-}
-
-.ruler__tick {
-  width: 1px;
-  height: 14px;
-  flex: none;
-  background: var(--hair-strong);
-}
-
-.ruler__tick.is-current {
-  width: 2px;
-  height: 20px;
-  background: var(--flare);
-}
-
-.ruler__count {
-  margin-left: 12px;
-  color: var(--ink-3);
-  font-family: var(--data);
-  font-size: 9.5px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
 /* ------------------------------------------------------ altitude tape --- */
 
 .alt {
@@ -2867,7 +2941,7 @@ body.low-power .rail > .rail__divider {
     --trace-gap: 20px;
     --card-pad: 18px;
     --rail-fade: 64px;
-    --rail-divider-width: 44px;
+    --rail-divider-width: 16px;
   }
 
   .hero {
@@ -2956,10 +3030,6 @@ body.low-power .rail > .rail__divider {
     padding-right: calc(var(--gutter) + var(--tape-w));
   }
 
-  .rail__divider-label {
-    font-size: 17px;
-  }
-
   .card--project {
     width: 80vw;
     height: auto;
@@ -2968,6 +3038,12 @@ body.low-power .rail > .rail__divider {
   .card--project > .card__cover {
     flex: none;
     height: 150px;
+  }
+
+  .card__preview {
+    top: 14px;
+    width: 84%;
+    border-radius: 8px 8px 0 0;
   }
 
   .card--project > .card__body {
@@ -3102,14 +3178,21 @@ body.low-power .rail > .rail__divider {
   }
 }
 
-@media (max-width: 520px) {
-  :root {
-    --trace-gap: 16px;
+/* The nav tab narrows in steps before the phone layout: first air, then the
+   wordmark and the sandbox label (the icons stand for both), then more air. */
+@media (max-width: 1000px) {
+  .nav {
+    gap: 20px;
   }
 
+  .nav__list {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 760px) {
   .nav {
-    gap: 12px;
-    padding: 8px 10px;
+    gap: 14px;
   }
 
   .nav__name {
@@ -3117,7 +3200,44 @@ body.low-power .rail > .rail__divider {
   }
 
   .nav__list {
-    gap: 11px;
+    gap: 16px;
+  }
+
+  .nav__item {
+    font-size: 13px;
+  }
+
+  .nav__sandbox {
+    padding: 7px;
+  }
+
+  .nav__sandbox-label {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .nav__list {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    --trace-gap: 16px;
+  }
+
+  .nav {
+    gap: 8px;
+    padding: 8px 9px;
+  }
+
+  .nav__name {
+    display: none;
+  }
+
+  .nav__list {
+    gap: 8px;
   }
 
   .nav__item {
@@ -3125,7 +3245,7 @@ body.low-power .rail > .rail__divider {
   }
 
   .nav__item--cta {
-    padding: 6px 12px;
+    padding: 6px 10px;
   }
 
   .nav__sandbox {
@@ -3193,11 +3313,9 @@ body.low-power .rail > .rail__divider {
     font-size: 11px;
   }
 
-  /* Cover titles wrap instead of bleeding off a narrow card. */
+  /* A narrow card sets cover titles by its width. */
   .card__big {
     font-size: 11vw;
-    line-height: 0.92;
-    white-space: normal;
   }
 
   .facts__row {
@@ -3246,27 +3364,38 @@ body.low-power .rail > .rail__divider {
    The reveal stays — it is a fade tied to scroll position, not motion — but
    nothing translates or draws itself. */
 
-/* The narrowest phones: the nav carries five controls, so it tightens a step. */
+/* The narrowest phones: the nav carries seven controls, so it tightens a step. */
 @media (max-width: 400px) {
   .nav {
-    gap: 9px;
-    padding: 7px 8px;
+    gap: 5px;
+    padding: 7px 7px;
+  }
+
+  .nav__icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+
+  .nav__icon svg {
+    width: 21px;
+    height: 21px;
   }
 
   .nav__list {
-    gap: 9px;
+    gap: 6px;
   }
 
   .nav__item {
-    font-size: 11.5px;
+    font-size: 11px;
   }
 
   .nav__item--cta {
-    padding: 5px 10px;
+    padding: 5px 8px;
   }
 
   .nav__sandbox {
-    padding: 5px;
+    padding: 4px;
   }
 
   .sandbox {
@@ -3280,6 +3409,18 @@ body.low-power .rail > .rail__divider {
 
   .sandbox__action {
     padding: 7px 10px;
+  }
+}
+
+/* 320px phones: even tightened the seven controls overrun, so the sandbox
+   toggle, the one control that is a toy rather than a place, steps out. */
+@media (max-width: 350px) {
+  .nav__sandbox {
+    display: none;
+  }
+
+  .nav__item {
+    font-size: 10.5px;
   }
 }
 
@@ -3345,6 +3486,16 @@ body.low-power .rail > .rail__divider {
 
   .skip {
     transition: none;
+  }
+
+  /* The previews fade in place instead of rising. */
+  .card__preview,
+  .card--project.is-previewing .card__preview {
+    transform: translate(-50%, 0);
+  }
+
+  .preview-pop {
+    transform: none;
   }
 
   :root {

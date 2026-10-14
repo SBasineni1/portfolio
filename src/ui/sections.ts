@@ -1,4 +1,4 @@
-import { about, bands, contact, education, experience, experienceGroups, projects, site, type Band } from '../content';
+import { about, bands, contact, education, experience, experienceGroups, projectGroups, projects, site, type Band } from '../content';
 import { progressForAltitude } from '../world/camera';
 import { educationSplit, experienceCard, groupDivider, projectCard } from './cards';
 import { el } from './dom';
@@ -102,9 +102,14 @@ export class Sections {
 
     const projectHost = document.querySelector<HTMLElement>('[data-projects]');
     if (projectHost) {
-      for (let i = 0; i < projects.length; i++) projectHost.append(projectCard(projects[i], i));
-      const ruler = document.querySelector<HTMLElement>('[data-ruler="projects"]');
-      this.relayouts.push(attachRail(projectHost, ruler, this.reduced));
+      for (let i = 0; i < projects.length; i++) {
+        const project = projects[i];
+        if (project.group !== projects[i - 1]?.group) {
+          projectHost.append(groupDivider(projectGroups[project.group], i));
+        }
+        projectHost.append(projectCard(project, i));
+      }
+      this.relayouts.push(attachRail(projectHost, this.reduced));
     }
 
     const expHost = document.querySelector<HTMLElement>('[data-experience]');
@@ -116,8 +121,7 @@ export class Sections {
         }
         expHost.append(experienceCard(entry, i));
       }
-      const ruler = document.querySelector<HTMLElement>('[data-ruler="experience"]');
-      this.relayouts.push(attachRail(expHost, ruler, this.reduced));
+      this.relayouts.push(attachRail(expHost, this.reduced));
     }
 
     const eduHost = document.querySelector('[data-education]');

@@ -33,7 +33,6 @@ const ICON_STOPS: readonly (readonly [number, string])[] = [
 
 export class Nav {
   private readonly items: HTMLAnchorElement[] = [];
-  private readonly navBands = bands.filter((band) => band.id !== 'about');
   private current = -2;
   private readonly icon: HTMLElement | null = document.querySelector('.nav__icon');
   private iconSpan = -1;
@@ -41,7 +40,7 @@ export class Nav {
 
   constructor(private readonly reduced: () => boolean) {
     const host = need('[data-nav]');
-    for (const band of this.navBands) {
+    for (const band of bands) {
       const li = el('li');
       const item = el('a', 'nav__item', band.label);
       item.href = `#${band.id}`;
@@ -65,8 +64,10 @@ export class Nav {
   update(altitude: number): void {
     this.paintIcon(altitude);
     let current = -1;
-    for (let i = 0; i < this.navBands.length; i++) {
-      if (altitude >= this.navBands[i].from - 1200) current = i;
+    // A band lights up a little before its own range. About starts at the
+    // pad, so it waits until the balloon is halfway to it: the hero is not About.
+    for (let i = 0; i < bands.length; i++) {
+      if (altitude >= Math.max(bands[i].from - 1200, bands[i].altitude / 2)) current = i;
     }
     if (current === this.current) return;
     this.current = current;

@@ -1,33 +1,14 @@
 const DRAG_THRESHOLD = 6;
 
-export function attachRail(
-  rail: HTMLElement,
-  ruler: HTMLElement | null,
-  reduced: () => boolean,
-): () => void {
+export function attachRail(rail: HTMLElement, reduced: () => boolean): () => void {
   let startX = 0;
   let startScrollLeft = 0;
   let pointerId = -1;
   let dragged = false;
-  let current = -1;
   let maxScroll = 0;
   const targets: number[] = [];
 
   const cards = rail.querySelectorAll<HTMLElement>(':scope > .card');
-  const ticks: HTMLElement[] = [];
-  let count: HTMLElement | null = null;
-
-  if (ruler) {
-    for (let i = 0; i < cards.length; i++) {
-      const tick = document.createElement('span');
-      tick.className = 'ruler__tick';
-      ruler.append(tick);
-      ticks.push(tick);
-    }
-    count = document.createElement('span');
-    count.className = 'ruler__count';
-    ruler.append(count);
-  }
 
   const nearestCard = (): number => {
     let nearest = 0;
@@ -41,16 +22,6 @@ export function attachRail(
       }
     }
     return nearest;
-  };
-
-  const updateRuler = (): void => {
-    if (!count || cards.length === 0) return;
-    const next = nearestCard();
-    if (next === current) return;
-    if (current >= 0) ticks[current].classList.remove('is-current');
-    current = next;
-    ticks[current].classList.add('is-current');
-    count.textContent = `${String(current + 1).padStart(2, '0')} / ${String(cards.length).padStart(2, '0')}`;
   };
 
   const endDrag = (event: PointerEvent): void => {
@@ -109,7 +80,6 @@ export function attachRail(
       break;
     }
   });
-  rail.addEventListener('scroll', updateRuler, { passive: true });
 
   return (): void => {
     maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
@@ -119,6 +89,5 @@ export function attachRail(
       // The positioned rail is the offset parent, so entrance transforms don't affect targets.
       targets[i] = Math.min(maxScroll, Math.max(0, cards[i].offsetLeft - padding - margin));
     }
-    updateRuler();
   };
 }
