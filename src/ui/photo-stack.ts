@@ -1,5 +1,5 @@
 import type { AboutPhoto } from '../content';
-import { el } from './dom';
+import { el, loadLater } from './dom';
 import { EASE_SETTLE, gsap } from './motion';
 
 /**
@@ -125,7 +125,7 @@ export function photoStack(photos: AboutPhoto[], reduced: () => boolean): HTMLEl
     const card = el('figure', 'snap');
     const frame = el('div', 'snap__photo');
     const img = el('img');
-    img.src = photo.src;
+    loadLater(img, photo.src);
     img.alt = photo.alt;
     img.width = 960;
     img.height = 720;

@@ -61,6 +61,9 @@ export class Reveals {
       parts.bands.push(
         SplitText.create(band, {
           type: 'chars',
+          // The kicker is scenery (the layer of sky), spelled out letter by
+          // letter: kept from screen readers rather than read as single chars.
+          aria: 'hidden',
           autoSplit: true,
           onSplit: (self) => gsap.set(self.chars, { opacity: parts.shown.head ? 1 : 0 }),
         }),
@@ -81,6 +84,9 @@ export class Reveals {
         SplitText.create(block, {
           type: 'lines',
           mask: 'lines',
+          // Whole words stay in the lines, so the text reads as it is; the
+          // default aria-label is not allowed on a plain paragraph.
+          aria: 'none',
           autoSplit: true,
           onSplit: (self) => settle(self, () => self.lines),
         }),

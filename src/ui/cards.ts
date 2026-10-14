@@ -1,6 +1,6 @@
 import type { EducationEntry, ExperienceEntry, Project } from '../content';
 import { mountCarousel } from './carousel';
-import { anchor, el } from './dom';
+import { anchor, el, loadLater } from './dom';
 import { icon, type IconName } from './icons';
 import { attachPreviewPop } from './preview-pop';
 
@@ -31,7 +31,7 @@ function skills(items: string[]): HTMLUListElement {
 
 function coverImage(src: string): HTMLImageElement {
   const image = el('img');
-  image.src = src;
+  loadLater(image, src);
   image.alt = '';
   return image;
 }

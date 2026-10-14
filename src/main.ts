@@ -1,3 +1,7 @@
+// Self-hosted, so text never waits on a third-party stylesheet: Inter with its
+// optical-size axis, Martian Mono with its width axis.
+import '@fontsource-variable/inter/opsz.css';
+import '@fontsource-variable/martian-mono/wdth.css';
 import './style.css';
 import { Balloon, GUST_PEAK, type BalloonEnv } from './physics/balloon';
 import { ExitTrack, EXIT_CLEARANCE } from './physics/track';

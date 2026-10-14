@@ -159,8 +159,9 @@ function arrive(node: HTMLElement): gsap.core.Timeline {
   const title = node.querySelector<HTMLElement>('.toast__title');
   const text = node.querySelector<HTMLElement>('.toast__text');
   const actions = [...node.querySelectorAll<HTMLElement>('.toast__action, .toast__sep, .toast__close')];
-  const titleSplit = title ? SplitText.create(title, { type: 'words', mask: 'words' }) : undefined;
-  const textSplit = text ? SplitText.create(text, { type: 'lines', mask: 'lines' }) : undefined;
+  // Whole words stay intact, so the text reads as it is without an aria-label.
+  const titleSplit = title ? SplitText.create(title, { type: 'words', mask: 'words', aria: 'none' }) : undefined;
+  const textSplit = text ? SplitText.create(text, { type: 'lines', mask: 'lines', aria: 'none' }) : undefined;
 
   const ping = document.createElement('span');
   ping.className = 'toast__ping';

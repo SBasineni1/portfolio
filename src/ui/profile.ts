@@ -50,6 +50,7 @@ export function mountProfile(): Polaroid {
   headshot.width = 480;
   headshot.height = 480;
   headshot.decoding = 'async';
+  headshot.fetchPriority = 'high';
   headshot.draggable = false;
   photo.append(headshot);
 
@@ -114,7 +115,7 @@ export function mountProfile(): Polaroid {
   const sync = (): void => {
     // Starts as an invitation; after that it names the link on the face showing.
     hint.textContent = flips === 0 ? `${verb} here to flip` : flipped ? `GitHub! ${verb} again` : `LinkedIn! ${verb} again`;
-    hint.setAttribute('aria-label', flipped ? 'Flip back to the photo' : 'Flip the photo over');
+    // No aria-label: the visible words are the name, and aria-pressed carries the state.
     hint.setAttribute('aria-pressed', String(flipped));
     // Only the face showing can be clicked or tabbed to.
     front.setAttribute('aria-hidden', String(flipped));

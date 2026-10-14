@@ -1,5 +1,5 @@
 import type { AboutPhoto } from '../content';
-import { el } from './dom';
+import { el, loadLater } from './dom';
 
 /** Seconds each photograph holds before the next slides in. */
 const HOLD = 6;
@@ -45,7 +45,7 @@ export function mountCarousel(host: HTMLElement, photos: AboutPhoto[], title: st
   const frames = [...photos, photos[0]].map((photo, index) => {
     const frame = el('div', 'carousel__frame');
     const image = el('img');
-    image.src = photo.src;
+    loadLater(image, photo.src);
     image.alt = index === photos.length ? '' : photo.alt;
     image.decoding = 'async';
     image.draggable = false;

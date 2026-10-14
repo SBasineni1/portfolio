@@ -19,7 +19,7 @@ export function asset(path: string): string {
 }
 
 export const profile = {
-  headshot: asset('profile/headshot.jpg'),
+  headshot: asset('profile/headshot.webp'),
   // Temporary reverse image: replace this path when the GitHub logo is ready.
   reverseImage: asset('profile/github-avatar.png'),
   reverseAlt: 'Suchit Basineni’s GitHub avatar',

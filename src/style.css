@@ -114,10 +114,10 @@
 
   --display: 'Cal Sans', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
   /* The hero's name and description keep Inter: the one place it stays, by choice. */
-  --hero-face: 'Inter', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --hero-face: 'Inter Variable', ui-sans-serif, system-ui, 'Helvetica Neue', Arial, sans-serif;
   /* Display cut: Cal Sans at full geometry. */
   --geo: 'GEOM' 100;
-  --data: 'Martian Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --data: 'Martian Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* The tape reserves a full column on the right; panels stop at its edge. */
   --tape-w: 120px;
@@ -3195,8 +3195,15 @@ body.low-power .rail > .rail__divider {
     gap: 14px;
   }
 
-  .nav__name {
-    display: none;
+  /* Out of sight but still the link's and the button's names. */
+  .nav__name,
+  .nav__sandbox-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .nav__list {
@@ -3209,10 +3216,6 @@ body.low-power .rail > .rail__divider {
 
   .nav__sandbox {
     padding: 7px;
-  }
-
-  .nav__sandbox-label {
-    display: none;
   }
 }
 
@@ -3232,10 +3235,6 @@ body.low-power .rail > .rail__divider {
     padding: 8px 9px;
   }
 
-  .nav__name {
-    display: none;
-  }
-
   .nav__list {
     gap: 8px;
   }
@@ -3250,10 +3249,6 @@ body.low-power .rail > .rail__divider {
 
   .nav__sandbox {
     padding: 6px;
-  }
-
-  .nav__sandbox-label {
-    display: none;
   }
 
   .sandbox {

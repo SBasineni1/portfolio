@@ -272,7 +272,16 @@ devDependency:
 - subset to Latin with `pyftsubset … --layout-features='*' --flavor=woff2`.
 
 `opsz`, `GEOM`, `wght` (400–700) and `SHRP` stay live. The licence is beside it as `OFL.txt`.
-Martian Mono and Inter (for the hero only) still load from Google Fonts.
+Martian Mono and Inter (for the hero only) are self-hosted too, from `@fontsource-variable/martian-mono`
+(`wdth.css`, family `Martian Mono Variable`) and `@fontsource-variable/inter` (`opsz.css`, family
+`Inter Variable`), imported at the top of `main.ts`. Nothing loads from a third-party origin, so no
+stylesheet outside the bundle blocks the first paint.
+
+**Loading order.** The hero headshot is a 640px WebP (`public/profile/headshot.webp`, ~20 KB),
+preloaded from `index.html` with `fetchpriority="high"`. Every other photo (About stack, project,
+experience and education covers, logos, the campus carousel) goes through `loadLater()` in
+`ui/dom.ts` and is fetched 250ms after `load`. The sections sit faded out inside the viewport, so
+`loading="lazy"` cannot defer them; without this they compete with the hero on slow connections.
 
 **Cal Sans has no width axis.** Hierarchy is built on **size + weight + case + GEOM**, and
 `font-stretch` must never appear on a display-face rule. It stays on `--data` rules, where
