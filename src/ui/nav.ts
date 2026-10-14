@@ -1,5 +1,5 @@
 import { bands } from '../content';
-import { progressForAltitude } from '../world/camera';
+import { progressForAltitude, scrollRange } from '../world/camera';
 import { el, need } from './dom';
 
 export function scrollToAltitude(
@@ -7,9 +7,8 @@ export function scrollToAltitude(
   id: string,
   reduced: () => boolean,
 ): void {
-  const range = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
   window.scrollTo({
-    top: progressForAltitude(altitude) * range,
+    top: progressForAltitude(altitude) * scrollRange(),
     behavior: reduced() ? 'auto' : 'smooth',
   });
   history.replaceState(null, '', `#${id}`);

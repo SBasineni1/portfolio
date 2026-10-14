@@ -35,6 +35,12 @@ const RIDGE_HEIGHT = 200;
 const GROUND_HEIGHT = 440;
 const RIDGE_BASELINE = 190;
 const GROUND_BASELINE = 90;
+/**
+ * The gradient sky, horizon haze and sun glow are smooth enough to paint at a
+ * quarter of the sky canvas's resolution and stretch: one full-screen copy
+ * instead of four full-screen gradient fills.
+ */
+const BACKDROP_DIVISOR = 4;
 
 function makeBushBrush(): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
@@ -73,6 +79,16 @@ export function setGroundInset(px: number): void {
 
 export function groundScreenY(altitude: number, height: number): number {
   return height - groundInset + altitude * GROUND_K;
+}
+
+/**
+ * Whole layer rows covering `rows`, with a row to spare each side so the
+ * stretch still blends the band's edges into transparency; false when empty.
+ */
+function layerBand(rows: { top: number; bottom: number }, height: number, out: { top: number; rows: number }): boolean {
+  out.top = Math.max(0, Math.floor(rows.top) - 1);
+  out.rows = Math.min(height, Math.ceil(rows.bottom) + 1) - out.top;
+  return out.rows > 0;
 }
 
 export interface View {
@@ -114,6 +130,9 @@ export class Scenery {
   private readonly brushShade = makeBrush(64, 0.2, 'rgba(196,206,222,1)', 'rgba(196,206,222,0)');
   private readonly brushCrown = makeBrush(64, 0.24, 'rgba(255,249,234,1)', 'rgba(255,249,234,0)');
   private readonly brushBush = makeBushBrush();
+  private readonly backdrop = document.createElement('canvas');
+  private readonly backdropContext = this.backdrop.getContext('2d', { alpha: false });
+  private backdropTime = Number.NaN;
   private readonly layerDivisor: number;
   private cloudLayer: HTMLCanvasElement | undefined;
   private cloudLayerContext: CanvasRenderingContext2D | undefined;
@@ -122,6 +141,14 @@ export class Scenery {
   private ridgeLayer: HTMLCanvasElement | undefined;
   private groundLayer: HTMLCanvasElement | undefined;
   private lastCloudAltitude = Number.POSITIVE_INFINITY;
+  /**
+   * The rows of the cloud and cirrus layers that hold any paint, in layer px.
+   * Only these are copied to the sky: the clouds sit in a band, and a stretch
+   * of transparent rows costs a phone as much as painted ones.
+   */
+  private readonly cloudRows = { top: 0, bottom: 0 };
+  private readonly cirrusRows = { top: 0, bottom: 0 };
+  private readonly band = { top: 0, rows: 0 };
   private readonly cloudX = new Float32Array(CLOUD_COUNT);
   private readonly cloudAlt = new Float32Array(CLOUD_COUNT);
   private readonly cloudScale = new Float32Array(CLOUD_COUNT);
@@ -209,6 +236,10 @@ export class Scenery {
     groundLayer.height = GROUND_HEIGHT;
     this.groundLayer = groundLayer;
 
+    this.backdrop.width = Math.ceil((width + 2 * BLEED) / BACKDROP_DIVISOR);
+    this.backdrop.height = Math.ceil((height + 2 * BLEED) / BACKDROP_DIVISOR);
+    this.backdropTime = Number.NaN;
+
     this.deck.resize();
     this.starfield.resize(width, height);
     this.renderGround();
@@ -271,8 +302,7 @@ export class Scenery {
     }
     this.lastSkyTime = v.time;
     this.effects.tick(v);
-    this.drawSky(ctx, v);
-    this.drawHaze(ctx, v);
+    this.drawBackdrop(ctx, v);
     this.drawStars(ctx, v);
     this.drawSun(ctx, v);
     this.drawLimb(ctx, v);
@@ -286,6 +316,32 @@ export class Scenery {
   drawForeground(ctx: CanvasRenderingContext2D, v: View): void {
     this.drawForegroundClouds(ctx, v);
     this.deck.drawFog(ctx, v, this.sky);
+  }
+
+  /**
+   * Sky gradient, haze and sun glow, painted small and stretched. The soft
+   * pass draws the same frame again, so it reuses this frame's painting.
+   */
+  private drawBackdrop(ctx: CanvasRenderingContext2D, v: View): void {
+    const small = this.backdropContext;
+    if (!small) {
+      this.drawSky(ctx, v);
+      this.drawHaze(ctx, v);
+      this.drawSunGlow(ctx, v);
+      return;
+    }
+    if (v.time !== this.backdropTime) {
+      this.backdropTime = v.time;
+      const scale = 1 / BACKDROP_DIVISOR;
+      small.setTransform(scale, 0, 0, scale, BLEED * scale, BLEED * scale);
+      this.drawSky(small, v);
+      this.drawHaze(small, v);
+      this.drawSunGlow(small, v);
+    }
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this.backdrop, -BLEED, -BLEED, this.backdrop.width * BACKDROP_DIVISOR, this.backdrop.height * BACKDROP_DIVISOR);
+    ctx.restore();
   }
 
   private drawSky(ctx: CanvasRenderingContext2D, v: View): void {
@@ -378,7 +434,8 @@ export class Scenery {
     out.bounce = Math.max(0, 1 - above / 500);
   }
 
-  private drawSun(ctx: CanvasRenderingContext2D, v: View): void {
+  /** The sun's wide halo and glow, under the stars (in the backdrop). */
+  private drawSunGlow(ctx: CanvasRenderingContext2D, v: View): void {
     const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - v.altitude / 2000));
     const presence = this.sunPresence(v.altitude);
     if (presence < 0.01) return;
@@ -395,8 +452,6 @@ export class Scenery {
     const innerBlue = Math.round(168 + (120 - 168) * dusk);
     const edgeGreen = Math.round(214 + (190 - 214) * dusk);
     const edgeBlue = Math.round(150 + (120 - 150) * dusk);
-    const discGreen = Math.round(252 + (190 - 252) * dusk);
-    const discBlue = Math.round(240 + (120 - 240) * dusk);
     ctx.save();
     ctx.globalAlpha = presence;
     const halo = ctx.createRadialGradient(x, y, 0, x, y, haloRadius);
@@ -410,6 +465,21 @@ export class Scenery {
     g.addColorStop(1, `rgba(255,${edgeGreen},${edgeBlue},0)`);
     ctx.fillStyle = g;
     ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    ctx.restore();
+  }
+
+  /** The sun's disc, drawn sharp over the stars. */
+  private drawSun(ctx: CanvasRenderingContext2D, v: View): void {
+    const dusk = this.sky.warmth * Math.min(1, Math.max(0, 1 - v.altitude / 2000));
+    const presence = this.sunPresence(v.altitude);
+    if (presence < 0.01) return;
+    const x = v.width * this.sky.sunX;
+    const y = this.sunY(v, dusk);
+    const dark = Math.min(1, v.altitude / 26000);
+    const discGreen = Math.round(252 + (190 - 252) * dusk);
+    const discBlue = Math.round(240 + (120 - 240) * dusk);
+    ctx.save();
+    ctx.globalAlpha = presence;
     ctx.fillStyle = `rgba(255,${discGreen},${discBlue},${0.55 + dark * 0.45})`;
     ctx.beginPath();
     ctx.arc(x, y, 14 + (1 - dark) * 8, 0, 6.283);
@@ -465,11 +535,14 @@ export class Scenery {
     const span = CLOUD_SPAN + v.width;
     let offset = (-v.driftX * 0.45) % span;
     if (offset < 0) offset += span;
+    const band = this.band;
+    if (!layerBand(this.cloudRows, layer.height, band)) return;
+    const k = v.height / layer.height;
     ctx.save();
     ctx.globalAlpha = fade;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(layer, -offset, 0, span, v.height);
-    ctx.drawImage(layer, span - offset, 0, span, v.height);
+    ctx.drawImage(layer, 0, band.top, layer.width, band.rows, -offset, band.top * k, span, band.rows * k);
+    ctx.drawImage(layer, 0, band.top, layer.width, band.rows, span - offset, band.top * k, span, band.rows * k);
     ctx.restore();
   }
 
@@ -479,6 +552,14 @@ export class Scenery {
     const divisor = this.layerDivisor;
     const span = CLOUD_SPAN + v.width;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const rows = this.cloudRows;
+    rows.top = Number.POSITIVE_INFINITY;
+    rows.bottom = Number.NEGATIVE_INFINITY;
+    const stamp = (brush: HTMLCanvasElement, x: number, y: number, w: number, h: number): void => {
+      ctx.drawImage(brush, x, y, w, h);
+      rows.top = Math.min(rows.top, y);
+      rows.bottom = Math.max(rows.bottom, y + h);
+    };
     for (let i = 0; i < CLOUD_COUNT; i++) {
       const scale = this.cloudScale[i];
       if (scale <= 0) continue;
@@ -506,7 +587,7 @@ export class Scenery {
           const radius = this.puffR[q] * scale * perspective;
           const cx = (stampX + this.puffX[q] * scale * perspective) / divisor;
           const cy = (sy + 16 * scale * perspective) / divisor;
-          ctx.drawImage(this.brushShade, cx - radius / divisor, cy - radius * 0.625 / divisor, radius * 2 / divisor, radius * 1.25 / divisor);
+          stamp(this.brushShade, cx - radius / divisor, cy - radius * 0.625 / divisor, radius * 2 / divisor, radius * 1.25 / divisor);
         }
         ctx.globalAlpha = alpha * 0.92;
         for (let p = 0; p < 5; p++) {
@@ -514,14 +595,14 @@ export class Scenery {
           const radius = this.puffR[q] * scale * perspective;
           const cx = (stampX + this.puffX[q] * scale * perspective - radius * 0.18) / divisor;
           const cy = (sy + this.puffY[q] * scale * perspective - radius * 0.46) / divisor;
-          ctx.drawImage(this.brushSoft, cx - radius / divisor, cy - radius * flatten / divisor, radius * 2 / divisor, radius * 2 * flatten / divisor);
+          stamp(this.brushSoft, cx - radius / divisor, cy - radius * flatten / divisor, radius * 2 / divisor, radius * 2 * flatten / divisor);
         }
         const crown = i * PUFFS + 2;
         const crownRadius = this.puffR[crown] * scale * perspective * 0.62;
         const crownX = (stampX + this.puffX[crown] * scale * perspective - crownRadius * 0.35) / divisor;
         const crownY = (sy + this.puffY[crown] * scale * perspective - crownRadius * 1.15) / divisor;
         ctx.globalAlpha = alpha;
-        ctx.drawImage(this.brushCrown, crownX - crownRadius / divisor, crownY - crownRadius * flatten / divisor, crownRadius * 2 / divisor, crownRadius * 2 * flatten / divisor);
+        stamp(this.brushCrown, crownX - crownRadius / divisor, crownY - crownRadius * flatten / divisor, crownRadius * 2 / divisor, crownRadius * 2 * flatten / divisor);
       };
       drawCloud(x);
       if (x > span - 520) drawCloud(x - span);
@@ -574,6 +655,9 @@ export class Scenery {
     const divisor = this.layerDivisor;
     const r = rand(20260904);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const rows = this.cirrusRows;
+    rows.top = Number.POSITIVE_INFINITY;
+    rows.bottom = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < 30; i++) {
       const x = r() * width * 2 / divisor;
       const y = (height * (0.57 + r() * 0.32)) / divisor;
@@ -581,6 +665,8 @@ export class Scenery {
       const h = (5 + r() * 13) / divisor;
       ctx.globalAlpha = 0.09 + r() * 0.16;
       ctx.drawImage(this.brushSoft, x - w * 0.5, y - h * 0.5, w, h);
+      rows.top = Math.min(rows.top, y - h * 0.5);
+      rows.bottom = Math.max(rows.bottom, y + h * 0.5);
     }
     ctx.globalAlpha = 1;
   }
@@ -594,11 +680,14 @@ export class Scenery {
     let offset = (v.driftX * 0.3) % layerWidth;
     if (offset < 0) offset += layerWidth;
     const y = (v.altitude - 9000) * 0.008;
+    const band = this.band;
+    if (!layerBand(this.cirrusRows, layer.height, band)) return;
+    const k = v.height / layer.height;
     ctx.save();
     ctx.globalAlpha = Math.max(0, rise);
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(layer, -offset, y, layerWidth, v.height);
-    ctx.drawImage(layer, layerWidth - offset, y, layerWidth, v.height);
+    ctx.drawImage(layer, 0, band.top, layer.width, band.rows, -offset, y + band.top * k, layerWidth, band.rows * k);
+    ctx.drawImage(layer, 0, band.top, layer.width, band.rows, layerWidth - offset, y + band.top * k, layerWidth, band.rows * k);
     ctx.restore();
   }
 

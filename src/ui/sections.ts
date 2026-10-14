@@ -27,6 +27,8 @@ interface Positioned {
   arrived: boolean;
   /** Reveal level below which the head resets: above wherever it rests at the pad. */
   resetBelow: number;
+  /** Scroll px a phone panel taller than the screen stays at full strength past its centre. */
+  hold: number;
   bodyArrived: boolean;
 }
 
@@ -43,9 +45,14 @@ const REVEAL_RAMP = 0.5;
 /** A head that has faded below this resets, so it plays again on return. */
 const HEAD_RESET = 0.05;
 
-/** Scroll-linked reveal amount, 0..1, for a section centred at `center`. */
-function revealAt(scrollY: number, viewportHeight: number, center: number): number {
-  const d = Math.abs(scrollY + viewportHeight * 0.5 - center) / viewportHeight;
+/**
+ * Scroll-linked reveal amount, 0..1, for a section centred at `center`. A
+ * panel taller than the screen `hold`s full strength for that many px of
+ * scroll past its centre, so its last lines can be read before it fades.
+ */
+function revealAt(scrollY: number, viewportHeight: number, center: number, hold = 0): number {
+  const offset = scrollY + viewportHeight * 0.5 - center;
+  const d = (offset > 0 ? Math.max(0, offset - hold) : -offset) / viewportHeight;
   const t = Math.min(1, Math.max(0, (REVEAL_FAR - d) / REVEAL_RAMP));
   return t * t * (3 - 2 * t);
 }
@@ -145,6 +152,7 @@ export class Sections {
           shownSweep: -1,
           arrived: false,
           resetBelow: HEAD_RESET,
+          hold: 0,
           bodyArrived: false,
         });
       }
@@ -174,6 +182,8 @@ export class Sections {
       const top = bottomAnchored
         ? center - viewportHeight * 0.5 + Math.max(NAV_CLEARANCE, viewportHeight - h - 74)
         : center - h / 2;
+      // The scroll it takes to bring that tail up to where a short panel ends.
+      item.hold = bottomAnchored && item.kind === 'panel' ? Math.max(0, NAV_CLEARANCE + h + 74 - viewportHeight) : 0;
       item.el.style.top = `${Math.round(Math.max(viewportHeight * 0.06, top))}px`;
     }
     for (const relayout of this.relayouts) relayout();
@@ -194,7 +204,7 @@ export class Sections {
     let focus = 0;
     let exit = 0;
     for (const item of this.items) {
-      const eased = revealAt(scrollY, viewportHeight, item.center);
+      const eased = revealAt(scrollY, viewportHeight, item.center, item.hold);
       let sweep = eased;
       // On a phone there is no room beside a text panel either, so About
       // parks the balloon off-screen too. Contact keeps it: its copy is about

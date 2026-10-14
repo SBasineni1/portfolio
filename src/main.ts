@@ -7,7 +7,7 @@ import { Balloon, GUST_PEAK, type BalloonEnv } from './physics/balloon';
 import { ExitTrack, EXIT_CLEARANCE } from './physics/track';
 import { windAt } from './physics/wind';
 import { attachInput } from './input';
-import { Camera, RELEASE_ALTITUDE, burstAmount } from './world/camera';
+import { Camera, RELEASE_ALTITUDE, burstAmount, setLayoutHeight } from './world/camera';
 import { Scenery, groundScreenY, setGroundInset, type View } from './world/scenery';
 import { PadGear } from './world/pad';
 import { drawBalloon, type DrawOptions } from './world/render';
@@ -57,10 +57,6 @@ const softBlur = document.createElement('canvas');
 const softBlurCanvasContext = softBlur.getContext('2d', { alpha: false });
 if (!softBlurCanvasContext) throw new Error('2D soft sky blur context is unavailable.');
 const softBlurContext = softBlurCanvasContext;
-const softHalf = document.createElement('canvas');
-const softHalfCanvasContext = softHalf.getContext('2d', { alpha: false });
-if (!softHalfCanvasContext) throw new Error('2D soft sky upscale context is unavailable.');
-const softHalfContext = softHalfCanvasContext;
 
 const sceneCanvas = document.querySelector<HTMLCanvasElement>('#scene');
 if (!sceneCanvas) throw new Error('Scene canvas not found.');
@@ -92,8 +88,24 @@ document.body.classList.toggle('low-power', lowPower);
 let focus = 0;
 let hidden = 0;
 
+/**
+ * Measures the large viewport (100lvh): the height with a phone's toolbars
+ * tucked away. The page and the canvases are laid out for it, so the toolbar
+ * sliding back in on a scroll up hides the bottom edge instead of resizing
+ * the climb under the reader's finger. Where lvh is unknown it measures 0.
+ */
+const tallest = document.createElement('div');
+tallest.setAttribute('aria-hidden', 'true');
+tallest.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100lvh;visibility:hidden;pointer-events:none';
+document.body.append(tallest);
+const layoutHeight = (): number => Math.max(window.innerHeight, tallest.offsetHeight);
+
 let width = window.innerWidth;
-let height = window.innerHeight;
+let height = layoutHeight();
+let sized = false;
+/** Clearance between the bottom edge and the pad, before any toolbar. */
+let padInset = 96;
+let groundInset = padInset;
 
 const camera = new Camera();
 const site = pickSite();
@@ -282,8 +294,15 @@ function syncSignals(altitude: number, nextFocus: number): void {
 function resize(): void {
   const oldW = width;
   const oldH = height;
+  // A toolbar sliding in or out leaves both alone: nothing to re-lay out.
+  if (sized && window.innerWidth === oldW && layoutHeight() === oldH) {
+    camera.readFromScroll();
+    return;
+  }
+  sized = true;
   width = window.innerWidth;
-  height = window.innerHeight;
+  height = layoutHeight();
+  setLayoutHeight(height);
 
   const dpr = Math.min(window.devicePixelRatio || 1, lowPower ? 2 : 2.5);
   const skyDpr = Math.min(dpr, lowPower ? 1 : 1.5);
@@ -293,8 +312,11 @@ function resize(): void {
   skyCanvas.style.height = `${height + 48}px`;
   skyContext.setTransform(skyDpr, 0, 0, skyDpr, 24 * skyDpr, 24 * skyDpr);
 
-  softCanvas.width = skyCanvas.width;
-  softCanvas.height = skyCanvas.height;
+  // Half the sky's resolution: the layer is a blur, so the compositor's free
+  // stretch to full size is invisible, and a full-size high-quality upscale
+  // on the main thread was the costliest draw on a phone.
+  softCanvas.width = Math.max(1, Math.round(skyCanvas.width * 0.5));
+  softCanvas.height = Math.max(1, Math.round(skyCanvas.height * 0.5));
   softCanvas.style.width = `${width + 48}px`;
   softCanvas.style.height = `${height + 48}px`;
   const softScale = 1 / SOFT_DIVISOR;
@@ -303,8 +325,6 @@ function resize(): void {
   softSmallContext.setTransform(softScale, 0, 0, softScale, 24 * softScale, 24 * softScale);
   softBlur.width = softSmall.width;
   softBlur.height = softSmall.height;
-  softHalf.width = Math.max(1, Math.round(softCanvas.width * 0.5));
-  softHalf.height = Math.max(1, Math.round(softCanvas.height * 0.5));
 
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -313,7 +333,9 @@ function resize(): void {
   context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   // Phones carry the launch tag and note along the bottom edge: lift the pad clear of them.
-  setGroundInset(width < 560 ? 200 : 96);
+  padInset = width < 560 ? 200 : 96;
+  groundInset = padInset + height - window.innerHeight;
+  setGroundInset(groundInset);
   scenery.resize(width, height);
 
   balloon.recenter((width - oldW) * 0.5, (height - oldH) * 0.42);
@@ -386,14 +408,10 @@ function render(alpha: number): void {
     softBlurContext.filter = 'blur(1px)';
     softBlurContext.drawImage(softSmall, 0, 0);
     softBlurContext.filter = 'none';
-    softHalfContext.setTransform(1, 0, 0, 1, 0, 0);
-    softHalfContext.imageSmoothingEnabled = true;
-    softHalfContext.imageSmoothingQuality = 'high';
-    softHalfContext.drawImage(softBlur, 0, 0, softHalf.width, softHalf.height);
     softContext.setTransform(1, 0, 0, 1, 0, 0);
     softContext.imageSmoothingEnabled = true;
     softContext.imageSmoothingQuality = 'high';
-    softContext.drawImage(softHalf, 0, 0, softCanvas.width, softCanvas.height);
+    softContext.drawImage(softBlur, 0, 0, softCanvas.width, softCanvas.height);
     softContext.fillStyle = 'rgba(0,0,0,0.28)';
     softContext.fillRect(0, 0, softCanvas.width, softCanvas.height);
   }
@@ -442,6 +460,15 @@ function frame(timestamp: number): void {
     weather.roll(weatherSite);
   }
   frameDelta = delta;
+  // The launch tag and note ride the visible bottom edge, which a phone's
+  // toolbar lifts above the canvas's: the pad eases up with them.
+  const insetTarget = padInset + height - window.innerHeight;
+  if (insetTarget !== groundInset) {
+    groundInset = reduced || Math.abs(insetTarget - groundInset) < 0.5
+      ? insetTarget
+      : groundInset + (insetTarget - groundInset) * (1 - Math.exp(-delta * 8));
+    setGroundInset(groundInset);
+  }
   render(accumulator / SIM_STEP);
 
   tape.update(currentTime, camera.altitude);

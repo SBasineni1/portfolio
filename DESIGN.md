@@ -61,8 +61,12 @@ the haze. That split is the architecture — **flat precise instrument in the DO
 the canvas** — and it is why the UI never competes with the scene.
 
 The world is three canvases. `#sky` carries the sharp procedural atmosphere (five-stop gradient,
-horizon haze band, brush-stamped cumulus, cirrus, sun, limb, stars). `#sky-soft` redraws that
-scenery at 1/12 scale (1/8 under low power), smooths it through half- and full-size upscales, and
+horizon haze band, brush-stamped cumulus, cirrus, sun, limb, stars). The gradient, haze and sun
+glow are painted together at quarter resolution and copied up in one pass; the sun's disc stays
+sharp over the stars. The cumulus and cirrus layers copy only the rows that hold paint. On a
+phone every full-screen pass is a few ms of canvas raster, so keep their count down. `#sky-soft` redraws that
+scenery at 1/12 scale (1/8 under low power), smooths it with a high-quality upscale into a canvas
+at half the sky's resolution (the compositor stretches that blur to full size for free), and
 dims it to 72%; `--focus` crossfades this fixed-softness layer over `#sky` whenever a text station
 is in view, so prose always sits on a soft ground without an animated CSS filter. `#scene`
 carries the balloon and near clouds and is never softened. The balloon itself is **painted live in
@@ -338,10 +342,21 @@ the middle of the screen:
 - **Hero.** It sits up under the nav (72px). The name, wrapping to two lines, and a 104px
   Polaroid share the first row; the tagline runs full width beneath at 14/1.45.
 - **Ground.** It is raised to 200px above the bottom edge (`setGroundInset`, below 560px), so the
-  pad and gear stay clear of the launch tag and the compact launch note along the bottom. The
+  pad and gear stay clear of the launch tag and the compact launch note along the bottom. While
+  the browser toolbar is showing, the inset grows by the toolbar's height (eased), since the
+  canvas runs on under the toolbar but the tag and note ride the visible edge.
+- **Toolbar.** The page and canvases are laid out for the large viewport (`100lvh`, measured by
+  a probe in main.ts), not `innerHeight`. The toolbar sliding in on a scroll up therefore only
+  covers the bottom edge: it does not re-lay out the 11-viewport climb, which used to jump the
+  content hundreds of px and the altitude by up to 1.3 km under the reader's finger. The
   near plate's last tenth is stretched down to fill the foreground below the ground line.
 - **Panel position.** Panels stay bottom-anchored, but their top never rises above 84px, just
-  under the fixed nav. A tall panel runs off the bottom rather than hiding its heading.
+  under the fixed nav. A tall panel runs off the bottom rather than hiding its heading, and holds
+  full strength for the extra scroll it takes to bring its tail into view (`hold` in
+  sections.ts) before it starts to fade. About shows its full copy this way.
+- **About ink.** About redeclares the ink, hair, halo and haze tokens at their day values. Its
+  full copy is still on screen as the climb crosses the ink band, and the day ink stays legible
+  over that mid-blue sky where the crossfading ink would not.
 - **Text panels.** About parks the balloon off-screen like a station does, latching at `--in` 0.75
   so it cannot fire before release at the pad. Contact keeps the balloon, because its copy is about
   the parachute in view. This applies below 900px, wherever panels are bottom-anchored.

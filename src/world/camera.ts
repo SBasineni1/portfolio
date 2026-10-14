@@ -12,6 +12,22 @@ export const LAUNCH_SPAN = 0.08;
 export const LAUNCH_TOP = 300;
 export const RELEASE_ALTITUDE = 55;
 
+/**
+ * The viewport height the page is laid out for (main.ts measures it): the
+ * tallest the viewport gets at this width. A phone's toolbar sliding in or
+ * out changes `innerHeight` but not this, so it cannot move the page.
+ */
+let layoutHeight = 0;
+
+export function setLayoutHeight(px: number): void {
+  layoutHeight = px;
+}
+
+/** Scroll px from the pad to the top of the climb. */
+export function scrollRange(): number {
+  return Math.max(1, document.documentElement.scrollHeight - (layoutHeight || window.innerHeight));
+}
+
 export function altitudeForProgress(t: number): number {
   const p = Math.min(1, Math.max(0, t));
   if (p <= LAUNCH_SPAN) return (p / LAUNCH_SPAN) * LAUNCH_TOP;
@@ -34,8 +50,7 @@ export class Camera {
   progress = 0;
 
   readFromScroll(): void {
-    const range = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    this.progress = Math.min(1, Math.max(0, window.scrollY / range));
+    this.progress = Math.min(1, Math.max(0, window.scrollY / scrollRange()));
     this.targetAltitude = altitudeForProgress(this.progress);
   }
 

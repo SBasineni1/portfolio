@@ -143,6 +143,22 @@
   --accent: #2a5f96;
 }
 
+/* About is the surface panel and only ever sits on daylight. On a phone its
+   full copy is tall enough to still be on screen as the climb crosses into
+   the instrument-white ink, so it keeps the day ink rather than greying out
+   over a mid-blue sky. */
+#about {
+  --ink: var(--ink-day);
+  --ink-2: color-mix(in srgb, var(--ink) 78%, transparent);
+  --ink-3: color-mix(in srgb, var(--ink) 56%, transparent);
+  --hair: color-mix(in srgb, var(--ink) 25%, transparent);
+  --hair-strong: color-mix(in srgb, var(--ink) 64%, transparent);
+  --halo-tint: rgba(226, 238, 250, 0.6);
+  --halo: 0 1px 5px var(--halo-tint);
+  --haze-core: rgba(233, 241, 249, 0.3);
+  --flare: #d1521c;
+}
+
 body.sky-dark {
   --chrome-ink: var(--ink-space);
   --chrome-ink-3: color-mix(in srgb, var(--ink-space) 76%, transparent);
@@ -2965,19 +2981,14 @@ body.low-power .rail > .rail__divider {
     filter: blur(30px);
   }
 
-  /* The full About copy outgrows a phone screen, and the panel fades by
-     scroll distance, so phones keep the lede, the photos and the facts. */
-  #about .panel__body > p:not(.panel__lede) {
-    display: none;
-  }
-
   .snaps {
     --snap-w: min(100%, 250px);
     position: relative;
     top: auto;
     bottom: auto;
     left: auto;
-    margin: 24px 0 8px;
+    /* Centred under the copy, not hung off its left edge. */
+    margin: 24px auto 8px;
   }
 
   .snaps__readout {
